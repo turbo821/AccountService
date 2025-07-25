@@ -11,7 +11,7 @@ public class StubDbContext
     {
         var accounts = new List<Account>()
         {
-            new Account
+            new()
             {
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Checking,
@@ -19,7 +19,7 @@ public class StubDbContext
                 Balance = 1000m,
                 OpenedAt = DateTime.UtcNow
             },
-            new Account
+            new()
             {
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Deposit,
@@ -31,7 +31,7 @@ public class StubDbContext
         };
         var transactions = new List<Transaction>
         {
-            new Transaction
+            new()
             {
                 AccountId = accounts[0].Id,
                 Amount = 100m,
@@ -40,7 +40,7 @@ public class StubDbContext
                 Description = "Initial deposit",
                 Timestamp = DateTime.UtcNow
             },
-            new Transaction
+            new()
             {
                 AccountId = accounts[1].Id,
                 Amount = 50m,

@@ -1,14 +1,28 @@
-﻿using AutoMapper;
+﻿using AccountService.Features.Accounts.Abstractions;
+using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
-public class CreateAccountHandler(IMapper mapper) : IRequestHandler<CreateAccountCommand, Guid>
+public class CreateAccountHandler(
+    IMapper mapper,
+    IAccountRepository repo,
+    ICurrencyValidator currencyValidator,
+    IOwnerVerificator ownerVerificator)
+    : IRequestHandler<CreateAccountCommand, Guid>
 {
-    public Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
+        if (!ownerVerificator.IsExists(request.OwnerId))
+            throw new ArgumentException("Client with this ID not found");
+
+        if (!currencyValidator.IsValid(request.Currency))
+            throw new ArgumentException("Unsupported currency");
+
         var account = mapper.Map<Account>(request);
 
-        return Task.FromResult(account.Id);
+        await repo.Add(account);
+
+        return account.Id;
     }
 }
