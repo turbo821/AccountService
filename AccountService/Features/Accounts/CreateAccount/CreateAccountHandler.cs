@@ -1,17 +1,17 @@
 ﻿using AccountService.Features.Accounts.Abstractions;
+using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
 public class CreateAccountHandler(
-    IMapper mapper,
-    IAccountRepository repo,
+    IMapper mapper, StubDbContext db,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator)
     : IRequestHandler<CreateAccountCommand, Guid>
 {
-    public async Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
+    public Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new ArgumentException("Client with this ID not found");
@@ -21,8 +21,8 @@ public class CreateAccountHandler(
 
         var account = mapper.Map<Account>(request);
 
-        await repo.Add(account);
+        db.Accounts.Add(account);
 
-        return account.Id;
+        return Task.FromResult(account.Id);
     }
 }

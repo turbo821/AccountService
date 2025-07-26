@@ -22,7 +22,6 @@ builder.Services.AddAutoMapper(cfg
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-builder.Services.AddSingleton<IAccountRepository, AccountStubRepository>();
 builder.Services.AddSingleton<IOwnerVerificator, OwnerVerificatorStub>();
 builder.Services.AddSingleton<ICurrencyValidator, CurrencyValidatorStub>();
 

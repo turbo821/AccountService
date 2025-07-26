@@ -36,7 +36,7 @@ public class StubDbContext
                 AccountId = accounts[0].Id,
                 Amount = 100m,
                 Currency = "USD",
-                Type = TransactionType.Deposit,
+                Type = TransactionType.Debit,
                 Description = "Initial deposit",
                 Timestamp = DateTime.UtcNow
             },
@@ -45,8 +45,8 @@ public class StubDbContext
                 AccountId = accounts[1].Id,
                 Amount = 50m,
                 Currency = "RUS",
-                Type = TransactionType.Deposit,
-                Description = "Initial deposit",
+                Type = TransactionType.Credit,
+                Description = "Initial credit",
                 Timestamp = DateTime.UtcNow
             }
         };

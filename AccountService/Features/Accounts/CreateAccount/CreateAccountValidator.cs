@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
-public class CreateAccountCommandValidator : AbstractValidator<CreateAccountCommand>
+public class CreateAccountValidator : AbstractValidator<CreateAccountCommand>
 {
-    public CreateAccountCommandValidator(
+    public CreateAccountValidator(
         ICurrencyValidator currencyValidator)
     {
         RuleFor(x => x.OwnerId)
@@ -21,14 +21,14 @@ public class CreateAccountCommandValidator : AbstractValidator<CreateAccountComm
             .Cascade(CascadeMode.Stop)
             .NotNull()
             .When(x => x.Type is AccountType.Deposit or AccountType.Credit)
-            .WithMessage("Interest rate must be provided for Deposit and Credit accounts.")
+            .WithMessage("Interest rate must be provided for Deposit and Credit accounts")
             .Must(rate => rate >= 0)
             .When(x => x.InterestRate.HasValue)
-            .WithMessage("Interest rate must be non-negative.");
+            .WithMessage("Interest rate must be non-negative");
 
         RuleFor(x => x.InterestRate)
             .Must(rate => rate is null)
             .When(x => x.Type == AccountType.Checking)
-            .WithMessage("Interest rate must not be set for Checking accounts.");
+            .WithMessage("Interest rate must not be set for Checking accounts");
     }
 }

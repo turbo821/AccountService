@@ -1,4 +1,4 @@
-﻿namespace AccountService.Features.Accounts.GetAccountList;
+﻿namespace AccountService.Features.Accounts;
 
 public record AccountDto(
     Guid Id,
