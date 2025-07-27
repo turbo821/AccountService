@@ -24,7 +24,7 @@ public class CheckOwnerAccountsHandler(StubDbContext db,
             dto = new CheckOwnerAccountsDto
             {
                 OwnerId = request.OwnerId,
-                Exists = false
+                AccountExists = false
             };
         }
         else
@@ -32,7 +32,7 @@ public class CheckOwnerAccountsHandler(StubDbContext db,
             dto = new CheckOwnerAccountsDto
             {
                 OwnerId = request.OwnerId,
-                Exists = true,
+                AccountExists = true,
                 AccountIds = accounts.ToList()
             };
         }

@@ -18,7 +18,7 @@ public class TransferBetweenAccountsHandler(StubDbContext db,
         if (toAccount is null)
             throw new KeyNotFoundException("Recipient account not found");
 
-        if (!currencyValidator.IsValid(request.Currency))
+        if (!currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
         if (!toAccount.Currency.Equals(fromAccount.Currency))
@@ -29,9 +29,6 @@ public class TransferBetweenAccountsHandler(StubDbContext db,
 
         if (!fromAccount.Currency.Equals(request.Currency.ToUpperInvariant()))
             throw new ArgumentException("Transaction currency is different from sender account currency");
-
-        if (fromAccount.Balance < request.Amount)
-            throw new InvalidOperationException("Insufficient funds in the sender account");
 
         var creditTransaction = new Transaction
         {
@@ -53,11 +50,8 @@ public class TransferBetweenAccountsHandler(StubDbContext db,
             Description = request.Description
         };
 
-        fromAccount.Balance -= request.Amount;
-        fromAccount.Transactions.Add(creditTransaction);
-
-        toAccount.Balance += request.Amount;
-        toAccount.Transactions.Add(debitTransaction);
+        fromAccount.ConductTransaction(creditTransaction);
+        toAccount.ConductTransaction(debitTransaction);
 
         db.Transactions.AddRange(debitTransaction, creditTransaction);
 

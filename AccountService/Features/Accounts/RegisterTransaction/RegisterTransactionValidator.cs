@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
+[UsedImplicitly]
 public class RegisterTransactionValidator : AbstractValidator<RegisterTransactionCommand>
 {
     public RegisterTransactionValidator()

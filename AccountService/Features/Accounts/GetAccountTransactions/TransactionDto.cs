@@ -1,5 +1,11 @@
-﻿namespace AccountService.Features.Accounts.GetAccountTransactions;
+﻿using JetBrains.Annotations;
 
+namespace AccountService.Features.Accounts.GetAccountTransactions;
+
+/// <summary>
+/// DTO информации о транзакции.
+/// </summary>
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class TransactionDto
 {
     public Guid TransactionId { get; set; }

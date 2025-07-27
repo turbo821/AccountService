@@ -1,10 +1,12 @@
 ﻿using AccountService.Exceptions;
+using JetBrains.Annotations;
 using System.Text.Json;
 
 namespace AccountService.Middlewares;
 
 public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
+    [UsedImplicitly]
     public async Task Invoke(HttpContext context)
     {
         try
@@ -16,10 +18,10 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)ex.StatusCode;
 
-            var result = JsonSerializer.Serialize(new
+            var result = JsonSerializer.Serialize(new ErrorResponse
             {
-                message = ex.Message,
-                errors = ex.Errors.Any() ? ex.Errors : null
+                Message = ex.Message,
+                Errors = ex.Errors.Any() ? ex.Errors : null
             });
 
             await context.Response.WriteAsync(result);
@@ -30,7 +32,16 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
             context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = ex.Message }));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new ErrorResponse { Message = ex.Message }));
         }
     }
+}
+
+/// <summary>
+/// Ответ при ошибке
+/// </summary>
+public class ErrorResponse
+{
+    public required string Message { get; set; }
+    public IDictionary<string, string[]>? Errors { get; set; }
 }

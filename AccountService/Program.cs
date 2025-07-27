@@ -23,8 +23,8 @@ builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 builder.Services.AddAutoMapper(cfg 
     => cfg.AddProfile<MappingProfile>());
 
-builder.Services.AddSingleton<IOwnerVerificator, OwnerVerificatorStub>();
-builder.Services.AddSingleton<ICurrencyValidator, CurrencyValidatorStub>();
+builder.Services.AddScoped<IOwnerVerificator, OwnerVerificatorStub>();
+builder.Services.AddScoped<ICurrencyValidator, CurrencyValidatorStub>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
@@ -32,7 +32,12 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+});
 
 var app = builder.Build();
 

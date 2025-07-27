@@ -2,5 +2,5 @@
 
 public interface ICurrencyValidator
 {
-    bool IsValid(string currency);
+    bool IsExists(string currency);
 }
