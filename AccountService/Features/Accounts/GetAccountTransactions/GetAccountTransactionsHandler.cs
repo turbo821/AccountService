@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using System;
 using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 

@@ -9,7 +9,7 @@ public class StubDbContext
 
     public StubDbContext()
     {
-        var accounts = new List<Account>()
+        var accounts = new List<Account>
         {
             new()
             {

@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
+[UsedImplicitly]
 public class CreateAccountValidator : AbstractValidator<CreateAccountCommand>
 {
     public CreateAccountValidator()

@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
+[UsedImplicitly]
 public class TransferBetweenAccountsValidator : AbstractValidator<TransferBetweenAccountsCommand>
 {
     public TransferBetweenAccountsValidator()
