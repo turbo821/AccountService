@@ -8,10 +8,10 @@ public class DeleteAccountHandler(StubDbContext db) : IRequestHandler<DeleteAcco
     public  Task<Guid> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
-            .Find(x => x.Id == request.Id);
+            .Find(x => x.Id == request.AccountId);
 
         if (account is null)
-            throw new KeyNotFoundException($"Account {request.Id} not found");
+            throw new KeyNotFoundException($"Account {request.AccountId} not found");
 
         if (account.ClosedAt != null)
             throw new InvalidOperationException("Account is already closed.");

@@ -8,13 +8,13 @@ public class UpdateAccountHandler(StubDbContext db) : IRequestHandler<UpdateAcco
     public Task Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
-            .Find(a => a.Id == request.Id);
+            .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account is null)
-            throw new KeyNotFoundException($"Account with id {request.Id} not found");
+            throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
-        if (account.ClosedAt != null)
-            throw new InvalidOperationException("Cannot update a closed account.");
+        if (account.Type is AccountType.Checking)
+            throw new ArgumentException("Interest rate must not be set for Checking accounts");
 
         account.InterestRate = request.InterestRate;
 

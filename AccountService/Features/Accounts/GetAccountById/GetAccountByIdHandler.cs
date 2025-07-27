@@ -10,10 +10,10 @@ public class GetAccountByIdHandler(
 {
     public Task<AccountDto> Handle(GetAccountByIdQuery request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts.Find(a => a.Id == request.Id && a.ClosedAt is null);
+        var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account == null)
-            throw new KeyNotFoundException($"Account with id {request.Id} not found");
+            throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
         var accountDto = mapper.Map<AccountDto>(account);
 

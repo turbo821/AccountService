@@ -1,29 +1,29 @@
-﻿using AccountService.Features.Accounts.Abstractions;
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
 public class CreateAccountValidator : AbstractValidator<CreateAccountCommand>
 {
-    public CreateAccountValidator(
-        ICurrencyValidator currencyValidator)
+    public CreateAccountValidator()
     {
         RuleFor(x => x.OwnerId)
-            .NotEmpty();
-
-        RuleFor(x => x.Currency)
-            .NotEmpty();
+            .NotEmpty().WithMessage("Owner ID is required");
 
         RuleFor(x => x.Type)
-            .IsInEnum();
+            .IsInEnum().WithMessage("Account type is required");
+
+        RuleFor(x => x.Currency)
+            .NotEmpty().WithMessage("Currency is required")
+            .Length(3).WithMessage("Currency must be specified in ISO format (3 characters)");
 
         RuleFor(x => x.InterestRate)
-            .Cascade(CascadeMode.Stop)
             .NotNull()
             .When(x => x.Type is AccountType.Deposit or AccountType.Credit)
-            .WithMessage("Interest rate must be provided for Deposit and Credit accounts")
+            .WithMessage("Interest rate must be provided for Deposit and Credit accounts");
+
+        RuleFor(x => x.InterestRate)
             .Must(rate => rate >= 0)
-            .When(x => x.InterestRate.HasValue)
+            .When(x => x.InterestRate.HasValue && x.Type is AccountType.Deposit or AccountType.Credit)
             .WithMessage("Interest rate must be non-negative");
 
         RuleFor(x => x.InterestRate)

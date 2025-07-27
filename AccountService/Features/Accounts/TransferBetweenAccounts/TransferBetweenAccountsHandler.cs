@@ -1,17 +1,16 @@
 ﻿using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
-using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
-public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
+public class TransferBetweenAccountsHandler(StubDbContext db,
     ICurrencyValidator currencyValidator) : IRequestHandler<TransferBetweenAccountsCommand>
 {
     public Task Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
     {
-        var fromAccount =  db.Accounts.Find(a => a.Id == request.FromAccountId);
-        var toAccount =  db.Accounts.Find(a => a.Id == request.ToAccountId);
+        var fromAccount =  db.Accounts.Find(a => a.Id == request.FromAccountId && a.ClosedAt is null);
+        var toAccount =  db.Accounts.Find(a => a.Id == request.ToAccountId && a.ClosedAt is null);
 
         if (fromAccount is null)
             throw new KeyNotFoundException("Sender account not found");
@@ -19,27 +18,48 @@ public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
         if (toAccount is null)
             throw new KeyNotFoundException("Recipient account not found");
 
-        if (fromAccount.ClosedAt != null)
-            throw new InvalidOperationException("The sender account has been closed");
-
-        if (toAccount.ClosedAt != null)
-            throw new InvalidOperationException("The recipient account has been closed");
-
         if (!currencyValidator.IsValid(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
-        if (!string.Equals(fromAccount.Currency, toAccount.Currency, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Валюты счетов не совпадают");
+        if (!toAccount.Currency.Equals(fromAccount.Currency))
+            throw new ArgumentException("Accounts with different currencies");
+
+        if(!toAccount.Currency.Equals(request.Currency.ToUpperInvariant()))
+            throw new ArgumentException("Transaction currency is different from recipient account currency");
+
+        if (!fromAccount.Currency.Equals(request.Currency.ToUpperInvariant()))
+            throw new ArgumentException("Transaction currency is different from sender account currency");
 
         if (fromAccount.Balance < request.Amount)
-            throw new InvalidOperationException("Not enough money in the sender account");
+            throw new InvalidOperationException("Insufficient funds in the sender account");
 
-        var transaction = mapper.Map<List<Transaction>>(request);
+        var creditTransaction = new Transaction
+        {
+            AccountId = request.ToAccountId,
+            CounterpartyAccountId = request.FromAccountId,
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Type = TransactionType.Credit,
+            Description = request.Description
+        };
+
+        var debitTransaction = new Transaction
+        {
+            AccountId = request.FromAccountId,
+            CounterpartyAccountId = request.ToAccountId,
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Type = TransactionType.Debit,
+            Description = request.Description
+        };
 
         fromAccount.Balance -= request.Amount;
-        toAccount.Balance += request.Amount;
-        db.Transactions.AddRange(transaction);
+        fromAccount.Transactions.Add(creditTransaction);
 
+        toAccount.Balance += request.Amount;
+        toAccount.Transactions.Add(debitTransaction);
+
+        db.Transactions.AddRange(debitTransaction, creditTransaction);
 
         return Task.CompletedTask;
     }

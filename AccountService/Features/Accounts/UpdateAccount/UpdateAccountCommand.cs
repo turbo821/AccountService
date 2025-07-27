@@ -2,4 +2,6 @@
 
 namespace AccountService.Features.Accounts.UpdateAccount;
 
-public record UpdateAccountCommand(Guid Id, decimal InterestRate) : IRequest; 
+public record UpdateAccountCommand(Guid AccountId, decimal InterestRate) : IRequest;
+
+public record UpdateInterestRateRequest(decimal InterestRate);

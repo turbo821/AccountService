@@ -19,10 +19,12 @@ public class TransferBetweenAccountsValidator : AbstractValidator<TransferBetwee
             .WithMessage("The transfer amount must be greater than zero");
 
         RuleFor(x => x.Currency)
-            .NotEmpty();
+            .NotEmpty().WithMessage("Currency is required")
+            .Length(3).WithMessage("Currency must be specified in ISO format (3 characters)");
 
         RuleFor(x => x.Description)
-            .MaximumLength(255);
+            .NotEmpty().WithMessage("Description is required")
+            .MaximumLength(255).WithMessage("Description must not exceed 255 characters");
 
         RuleFor(x => x)
             .Must(x => x.FromAccountId != x.ToAccountId)

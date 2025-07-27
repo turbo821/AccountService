@@ -16,17 +16,23 @@ public class StubDbContext
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Checking,
                 Currency = "USD",
-                Balance = 1000m,
-                OpenedAt = DateTime.UtcNow
+                Balance = 1000m
             },
             new()
             {
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Deposit,
-                Currency = "RUS",
+                Currency = "RUB",
                 Balance = 10000m,
-                InterestRate = 0.01m,
-                OpenedAt = DateTime.UtcNow
+                InterestRate = 0.01m
+            },
+            new()
+            {
+                OwnerId = Guid.NewGuid(),
+                Type = AccountType.Checking,
+                Currency = "RUB",
+                Balance = 10000m,
+                InterestRate = 0
             }
         };
         var transactions = new List<Transaction>

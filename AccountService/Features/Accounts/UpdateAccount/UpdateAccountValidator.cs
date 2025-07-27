@@ -6,10 +6,14 @@ public class UpdateAccountValidator : AbstractValidator<UpdateAccountCommand>
 {
     public UpdateAccountValidator()
     {
-        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.AccountId)
+            .NotEmpty().WithMessage("Account ID is required");
+
+        RuleFor(x => x.InterestRate)
+            .NotEmpty().WithMessage("Update interest rate is required");
+
         RuleFor(x => x.InterestRate)
             .GreaterThanOrEqualTo(0)
-            .LessThanOrEqualTo(100)
-            .WithMessage("Interest rate is out of bounds");
+            .WithMessage("Interest rate must be non-negative");
     }
 }

@@ -11,23 +11,23 @@ public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
 {
     public Task<Guid> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts.Find(a => a.Id == request.AccountId);
+        var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account == null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
-        if (account.ClosedAt != null)
-            throw new InvalidOperationException("Cannot register transaction on closed account.");
-
         if (!currencyValidator.IsValid(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
-        if (account.Balance < request.Amount)
+        if (!account.Currency.Equals(request.Currency.ToUpperInvariant()))
+            throw new ArgumentException("Transaction currency is different from account currency");
+
+        if (account.Balance < request.Amount && request.Type == TransactionType.Credit)
             throw new InvalidOperationException("Insufficient funds for this transaction");
 
         switch (request.Type)
         {
-            case TransactionType.Credit:
+            case TransactionType.Credit:    
                 account.Balance -= request.Amount;
                 break;
             case TransactionType.Debit:
@@ -38,6 +38,8 @@ public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
         }
 
         var transaction = mapper.Map<Transaction>(request);
+
+        account.Transactions.Add(transaction);
         db.Transactions.Add(transaction);
 
         return Task.FromResult(transaction.Id);

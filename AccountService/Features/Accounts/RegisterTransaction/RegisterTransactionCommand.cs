@@ -9,3 +9,10 @@ public record RegisterTransactionCommand(
     TransactionType Type,
     string Description
 ) : IRequest<Guid>;
+
+public record RegisterTransactionRequest(
+    decimal Amount,
+    string Currency,
+    TransactionType Type,
+    string Description
+);
