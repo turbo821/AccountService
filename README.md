@@ -27,7 +27,7 @@
 
 - MediatR — реализация паттерна CQRS / Mediator
 
-- Swagger/OpenAPI — генерация Swagger UI для документации API
+- Swagger / OpenAPI — генерация Swagger UI для документации API
 
 ---
 
