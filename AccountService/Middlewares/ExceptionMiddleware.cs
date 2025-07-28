@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace AccountService.Middlewares;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
     [UsedImplicitly]
     public async Task Invoke(HttpContext context)

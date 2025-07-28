@@ -5,8 +5,8 @@ using FluentValidation;
 
 namespace AccountService.Middlewares;
 
-public class ExceptionHandlingBehavior<TRequest, TResponse>(
-    ILogger<ExceptionHandlingBehavior<TRequest, TResponse>> logger)
+public class ExceptionBehavior<TRequest, TResponse>(
+    ILogger<ExceptionBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
     public async Task<TResponse> Handle(
