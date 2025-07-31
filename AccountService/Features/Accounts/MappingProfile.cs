@@ -1,4 +1,5 @@
 ﻿using AccountService.Features.Accounts.CreateAccount;
+using AccountService.Features.Accounts.GetAccountStatement;
 using AccountService.Features.Accounts.GetAccountTransactions;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AutoMapper;
@@ -23,7 +24,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.TransactionId,
                 opt => opt.MapFrom(src => src.Id));
 
-        CreateMap<Account, AccountTransactionsDto>()
+        CreateMap<Account, AccountStatementDto>()
             .ForMember(dest => dest.AccountId, 
                 opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.Transactions, 

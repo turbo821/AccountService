@@ -1,8 +1,10 @@
-﻿using AccountService.Features.Accounts.CheckOwnerAccounts;
+﻿using AccountService.Features.Accounts;
+using AccountService.Features.Accounts.CheckOwnerAccounts;
 using AccountService.Features.Accounts.CreateAccount;
 using AccountService.Features.Accounts.DeleteAccount;
 using AccountService.Features.Accounts.GetAccountById;
 using AccountService.Features.Accounts.GetAccountList;
+using AccountService.Features.Accounts.GetAccountStatement;
 using AccountService.Features.Accounts.GetAccountTransactions;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AccountService.Features.Accounts.TransferBetweenAccounts;
@@ -11,7 +13,7 @@ using AccountService.Middlewares;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AccountService.Features.Accounts;
+namespace AccountService.Controllers;
 
 /// <summary>
 /// Контроллер для управления банковскими счетами.
@@ -135,17 +137,19 @@ public class AccountsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Возвращает список транзакций по счёту.
+    /// Возвращает выписку по счету за определенный период.
     /// </summary>
     /// <param name="accountId">Идентификатор счёта.</param>
+    /// <param name="fromDate">Дата начала периода (опционально).</param>
+    /// <param name="toDate">Дата окончания периода (опционально).</param>
     /// <returns>Выписка по счёту.</returns>
     [HttpGet("{accountId:guid}/transactions")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountTransactionsDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountStatementDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
-    public async Task<IActionResult> GetStatement(Guid accountId)
+    public async Task<IActionResult> GetAccountStatement(Guid accountId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
-        var query = new GetAccountTransactionsQuery(accountId);
+        var query = new GetAccountStatementQuery(accountId, fromDate, toDate);
         var accountTransactionsDto = await mediator.Send(query);
         return Ok(accountTransactionsDto);
     }

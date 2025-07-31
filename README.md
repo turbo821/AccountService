@@ -196,8 +196,8 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 
 ### 8. Выдача выписки клиенту по счету
-*   **Endpoint:** `GET /accounts/{accountId}/transactions`
-*   **Описание:** Возвращает список транзакций по счёту.
+*   **Endpoint:** `GET /accounts/{accountId}/transactions?fromDate={fromDate?}&toDate={toDate?}`
+*   **Описание:** Возвращает выписку по счету за определенный период.
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
