@@ -33,7 +33,7 @@ public class CheckOwnerAccountsHandler(StubDbContext db,
             {
                 OwnerId = request.OwnerId,
                 AccountExists = true,
-                AccountIds = accounts.ToList()
+                AccountCount = accounts.Count
             };
         }
 

@@ -5,4 +5,5 @@ namespace AccountService.Features.Accounts.GetAccountList;
 /// <summary>
 /// Запрос на получение списка всех счетов.
 /// </summary>
-public record GetAccountListQuery : IRequest<IEnumerable<AccountDto>>;
+/// <param name="OwnerId">ID владельца счетов (опционально).</param>
+public record GetAccountListQuery(Guid? OwnerId) : IRequest<IReadOnlyList<AccountDto>>;

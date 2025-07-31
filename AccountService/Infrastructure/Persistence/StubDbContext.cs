@@ -16,7 +16,8 @@ public class StubDbContext
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Checking,
                 Currency = "USD",
-                Balance = 1000m
+                Balance = 1000m,
+                OpenedAt = new DateTime(2025, 2, 20)
             },
             new()
             {
@@ -24,7 +25,8 @@ public class StubDbContext
                 Type = AccountType.Deposit,
                 Currency = "RUB",
                 Balance = 10000m,
-                InterestRate = 0.01m
+                InterestRate = 0.01m, 
+                OpenedAt = DateTime.UtcNow
             },
             new()
             {
@@ -32,7 +34,8 @@ public class StubDbContext
                 Type = AccountType.Checking,
                 Currency = "RUB",
                 Balance = 10000m,
-                InterestRate = 0
+                InterestRate = 0,
+                OpenedAt = new DateTime(2021, 10, 5)
             }
         };
         var transactions = new List<Transaction>
@@ -44,7 +47,7 @@ public class StubDbContext
                 Currency = "USD",
                 Type = TransactionType.Debit,
                 Description = "Initial deposit",
-                Timestamp = DateTime.UtcNow
+                Timestamp = new DateTime(2025, 4, 22)
             },
             new()
             {
