@@ -1,6 +1,7 @@
 ﻿using AccountService.Features.Accounts.CreateAccount;
 using AccountService.Features.Accounts.GetAccountStatement;
 using AccountService.Features.Accounts.RegisterTransaction;
+using AccountService.Features.Accounts.UpdateAccount;
 using AutoMapper;
 
 namespace AccountService.Features.Accounts;
@@ -12,6 +13,12 @@ public class MappingProfile : Profile
         CreateMap<CreateAccountCommand, Account>()
             .ForMember(dest => dest.Currency,
                opt => opt.MapFrom(src => src.Currency.ToUpperInvariant()));
+
+        CreateMap<UpdateAccountCommand, Account>()
+            .ForMember(dest => dest.Id,
+                opt => opt.MapFrom(src => src.AccountId))
+            .ForMember(dest => dest.Currency,
+                opt => opt.MapFrom(src => src.Currency.ToUpperInvariant()));
 
         CreateMap<Account, AccountDto>();
 

@@ -16,7 +16,7 @@ public class CreateAccountValidator : AbstractValidator<CreateAccountCommand>
 
         RuleFor(x => x.Currency)
             .NotEmpty().WithMessage("Currency is required")
-            .Length(3).WithMessage("Currency must be specified in ISO format (3 characters)");
+            .Matches("^[a-zA-Z]{3}$").WithMessage("Currency must be specified in ISO 4217 format (3 characters)");
 
         RuleFor(x => x.InterestRate)
             .NotNull()

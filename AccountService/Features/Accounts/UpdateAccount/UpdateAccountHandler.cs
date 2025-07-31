@@ -1,11 +1,16 @@
-﻿using AccountService.Infrastructure.Persistence;
+﻿using AccountService.Features.Accounts.Abstractions;
+using AccountService.Infrastructure.Persistence;
+using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.UpdateAccount;
 
-public class UpdateAccountHandler(StubDbContext db) : IRequestHandler<UpdateAccountCommand>
+public class UpdateAccountHandler(
+    IMapper mapper, StubDbContext db,
+    ICurrencyValidator currencyValidator,
+    IOwnerVerificator ownerVerificator) : IRequestHandler<UpdateAccountCommand, Guid>
 {
-    public Task Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
+    public Task<Guid> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
@@ -13,11 +18,20 @@ public class UpdateAccountHandler(StubDbContext db) : IRequestHandler<UpdateAcco
         if (account is null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
-        if (account.Type is AccountType.Checking)
-            throw new ArgumentException("Interest rate must not be set for Checking accounts");
+        if (!ownerVerificator.IsExists(request.OwnerId))
+            throw new ArgumentException("Client with this ID not found");
 
-        account.InterestRate = request.InterestRate;
+        if (!currencyValidator.IsExists(request.Currency))
+            throw new ArgumentException("Unsupported currency");
 
-        return Task.CompletedTask;
+        request.OpenedAt ??= account.OpenedAt;
+
+        db.Accounts.Remove(account); // Change to Update operation
+
+        account = mapper.Map<Account>(request);
+        
+        db.Accounts.Add(account); // Change to Update operation
+
+        return Task.FromResult(account.Id);
     }
 }

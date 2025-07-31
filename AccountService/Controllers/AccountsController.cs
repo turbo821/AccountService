@@ -8,6 +8,7 @@ using AccountService.Features.Accounts.GetAccountStatement;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AccountService.Features.Accounts.TransferBetweenAccounts;
 using AccountService.Features.Accounts.UpdateAccount;
+using AccountService.Features.Accounts.UpdateInterestRate;
 using AccountService.Middlewares;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -66,6 +67,31 @@ public class AccountsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
+    /// Изменяет данные счёта по его ID.
+    /// </summary>
+    /// <param name="id">ID изменяемого счета.</param>
+    /// <param name="request">Запрос с данными на изменение счета.</param>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    public async Task<IActionResult> UpdateAccount(Guid id, [FromBody] UpdateAccountRequest request)
+    {
+        var command = new UpdateAccountCommand(
+            id,
+            request.OwnerId,
+            request.Type,
+            request.Currency,
+            request.Balance,
+            request.InterestRate,
+            request.OpenedAt
+        );
+
+        var accountId = await mediator.Send(command);
+        return Ok(new { AccountId = accountId });
+    }
+
+    /// <summary>
     /// Обновляет процентную ставку по счёту.
     /// </summary>
     /// <param name="id">ID счёта.</param>
@@ -77,7 +103,7 @@ public class AccountsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
     public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateInterestRateRequest request)
     {
-        var command = new UpdateAccountCommand(id, request.InterestRate);
+        var command = new UpdateInterestRateCommand(id, request.InterestRate);
         await mediator.Send(command);
         return Ok();
     }
@@ -159,7 +185,7 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// </summary>
     /// <param name="ownerId">Идентификатор владельца.</param>
     /// <returns>Информация о счетах владельца.</returns>
-    [HttpGet("owner/{ownerId:guid}")]
+    [HttpGet("check-owner/{ownerId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CheckOwnerAccountsDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]

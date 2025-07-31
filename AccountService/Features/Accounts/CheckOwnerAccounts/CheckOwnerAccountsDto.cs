@@ -5,7 +5,16 @@
 /// </summary>
 public class CheckOwnerAccountsDto
 {
+    /// <summary>
+    /// ID Владельца счёта.
+    /// </summary>
     public Guid OwnerId { get; set; }
+    /// <summary>
+    /// Проверяет, есть ли у владельца счета хотя бы один счет.
+    /// </summary>
     public bool AccountExists { get; set; }
-    public IEnumerable<Guid> AccountIds { get; set; } = [];
+    /// <summary>
+    /// Количество счетов у владельца.
+    /// </summary>
+    public int AccountCount { get; set; }
 }
