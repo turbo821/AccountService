@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 
-namespace AccountService.Features.Accounts.GetAccountTransactions;
+namespace AccountService.Features.Accounts.GetAccountStatement;
 
 /// <summary>
 /// DTO информации о транзакции.

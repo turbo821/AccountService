@@ -5,7 +5,6 @@ using AccountService.Features.Accounts.DeleteAccount;
 using AccountService.Features.Accounts.GetAccountById;
 using AccountService.Features.Accounts.GetAccountList;
 using AccountService.Features.Accounts.GetAccountStatement;
-using AccountService.Features.Accounts.GetAccountTransactions;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AccountService.Features.Accounts.TransferBetweenAccounts;
 using AccountService.Features.Accounts.UpdateAccount;
@@ -37,14 +36,15 @@ public class AccountsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Возвращает список всех открытых счетов.
+    /// Возвращает список всех открытых счетов (опционально для конкретного владельца).
     /// </summary>
+    /// <param name="ownerId">ID владельца счетов (опционально).</param>
     /// <returns>Список счетов.</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AccountDto>))]
-    public async Task<IActionResult> GetAccountList()
+    public async Task<IActionResult> GetAccountList([FromQuery] Guid? ownerId)
     {
-        var query = new GetAccountListQuery();
+        var query = new GetAccountListQuery(ownerId);
         var accounts = await mediator.Send(query);
         return Ok(accounts);
     }

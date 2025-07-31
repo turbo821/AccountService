@@ -1,6 +1,5 @@
 ﻿using AccountService.Features.Accounts.CreateAccount;
 using AccountService.Features.Accounts.GetAccountStatement;
-using AccountService.Features.Accounts.GetAccountTransactions;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AutoMapper;
 

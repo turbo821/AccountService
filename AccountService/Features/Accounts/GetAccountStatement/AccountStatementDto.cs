@@ -1,5 +1,4 @@
-﻿using AccountService.Features.Accounts.GetAccountTransactions;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts.GetAccountStatement;
 
