@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts.Abstractions;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using MediatR;
 
@@ -6,9 +7,9 @@ namespace AccountService.Features.Accounts.CheckOwnerAccounts;
 
 public class CheckOwnerAccountsHandler(StubDbContext db,
     IOwnerVerificator ownerVerificator)
-    : IRequestHandler<CheckOwnerAccountsQuery, CheckOwnerAccountsDto>
+    : IRequestHandler<CheckOwnerAccountsQuery, MbResult<CheckOwnerAccountsDto>>
 {
-    public Task<CheckOwnerAccountsDto> Handle(CheckOwnerAccountsQuery request, CancellationToken cancellationToken)
+    public Task<MbResult<CheckOwnerAccountsDto>> Handle(CheckOwnerAccountsQuery request, CancellationToken cancellationToken)
     {
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new KeyNotFoundException("Client with this ID not found");
@@ -37,6 +38,6 @@ public class CheckOwnerAccountsHandler(StubDbContext db,
             };
         }
 
-        return Task.FromResult(dto);
+        return Task.FromResult(new MbResult<CheckOwnerAccountsDto>(dto));
     }
 }

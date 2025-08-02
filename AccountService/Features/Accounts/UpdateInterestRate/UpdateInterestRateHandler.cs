@@ -1,11 +1,12 @@
-﻿using AccountService.Infrastructure.Persistence;
+﻿using AccountService.Application.Models;
+using AccountService.Infrastructure.Persistence;
 using MediatR;
 
 namespace AccountService.Features.Accounts.UpdateInterestRate;
 
-public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<UpdateInterestRateCommand>
+public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<UpdateInterestRateCommand, MbResult<Unit>>
 {
-    public Task Handle(UpdateInterestRateCommand request, CancellationToken cancellationToken)
+    public Task<MbResult<Unit>> Handle(UpdateInterestRateCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
@@ -18,6 +19,6 @@ public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<Updat
 
         account.InterestRate = request.InterestRate;
 
-        return Task.CompletedTask;
+        return Task.FromResult(new MbResult<Unit>(Unit.Value));
     }
 }

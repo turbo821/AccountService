@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
@@ -16,4 +17,4 @@ public record TransferBetweenAccountsCommand(
     decimal Amount,
     string Currency,
     string Description
-) : IRequest;
+) : IRequest<MbResult<IReadOnlyList<TransactionIdDto>>>;

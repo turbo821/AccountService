@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountList;
 
@@ -6,4 +7,4 @@ namespace AccountService.Features.Accounts.GetAccountList;
 /// Запрос на получение списка всех счетов.
 /// </summary>
 /// <param name="OwnerId">ID владельца счетов (опционально).</param>
-public record GetAccountListQuery(Guid? OwnerId) : IRequest<IReadOnlyList<AccountDto>>;
+public record GetAccountListQuery(Guid? OwnerId) : IRequest<MbResult<IReadOnlyList<AccountDto>>>;

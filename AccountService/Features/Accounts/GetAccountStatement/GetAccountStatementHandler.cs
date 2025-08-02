@@ -1,13 +1,14 @@
-﻿using AccountService.Infrastructure.Persistence;
+﻿using AccountService.Application.Models;
+using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountStatement;
 
 public class GetAccountStatementHandler(StubDbContext db, IMapper mapper)
-    : IRequestHandler<GetAccountStatementQuery, AccountStatementDto>
+    : IRequestHandler<GetAccountStatementQuery, MbResult<AccountStatementDto>>
 {
-    public Task<AccountStatementDto> Handle(GetAccountStatementQuery request, CancellationToken cancellationToken)
+    public Task<MbResult<AccountStatementDto>> Handle(GetAccountStatementQuery request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
@@ -24,6 +25,6 @@ public class GetAccountStatementHandler(StubDbContext db, IMapper mapper)
         account.Transactions = transactions;
         var accountTransactionsDto = mapper.Map<AccountStatementDto>(account);
 
-        return Task.FromResult(accountTransactionsDto);
+        return Task.FromResult(new MbResult<AccountStatementDto>(accountTransactionsDto));
     }
 }

@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts.Abstractions;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
@@ -6,9 +7,9 @@ using MediatR;
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
 public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
-    ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, Guid>
+    ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, MbResult<TransactionIdDto>>
 {
-    public Task<Guid> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
+    public Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
@@ -26,6 +27,7 @@ public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
         account.ConductTransaction(transaction);
         db.Transactions.Add(transaction);
 
-        return Task.FromResult(transaction.Id);
+        var transactionIdDto = mapper.Map<TransactionIdDto>(transaction);
+        return Task.FromResult(new MbResult<TransactionIdDto>(transactionIdDto));
     }
 }

@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.UpdateInterestRate;
 
@@ -7,7 +8,7 @@ namespace AccountService.Features.Accounts.UpdateInterestRate;
 /// </summary>
 /// <param name="AccountId">Идентификатор счёта, процентная ставка которого изменяется.</param>
 /// <param name="InterestRate">Новая процентная ставка (в процентах).</param>
-public record UpdateInterestRateCommand(Guid AccountId, decimal InterestRate) : IRequest;
+public record UpdateInterestRateCommand(Guid AccountId, decimal InterestRate) : IRequest<MbResult<Unit>>;
 
 /// <summary>
 /// Запрос на обновление процентной ставки.

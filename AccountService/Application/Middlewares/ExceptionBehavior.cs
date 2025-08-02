@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using System.Net;
-using AccountService.Exceptions;
+using AccountService.Application.Exceptions;
 using FluentValidation;
 
-namespace AccountService.Middlewares;
+namespace AccountService.Application.Middlewares;
 
 public class ExceptionBehavior<TRequest, TResponse>(
     ILogger<ExceptionBehavior<TRequest, TResponse>> logger)

@@ -1,0 +1,10 @@
+services:
+  api:
+    image: account-service
+    build:
+      context: .
+      dockerfile: AccountService/Dockerfile
+    ports:
+      - "80:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development

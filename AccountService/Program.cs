@@ -1,13 +1,24 @@
+using AccountService.Application.Middlewares;
 using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AccountService.Infrastructure.Services;
-using AccountService.Middlewares;
 using FluentValidation;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddSingleton<StubDbContext>();
 
@@ -19,6 +30,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+ValidatorOptions.Global.DefaultRuleLevelCascadeMode = CascadeMode.Stop;
 
 builder.Services.AddAutoMapper(cfg 
     => cfg.AddProfile<MappingProfile>());
@@ -41,6 +53,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

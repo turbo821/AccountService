@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using AccountService.Application.Models;
+using JetBrains.Annotations;
 using MediatR;
 
 namespace AccountService.Features.Accounts.UpdateAccount;
@@ -21,7 +22,7 @@ public class UpdateAccountCommand(
     string currency,
     decimal balance,
     decimal? interestRate,
-    DateTime? openedAt) : IRequest<Guid>
+    DateTime? openedAt) : IRequest<MbResult<Unit>>
 {
     public Guid AccountId { get; init; } = accountId;
     public Guid OwnerId { get; init; } = ownerId;

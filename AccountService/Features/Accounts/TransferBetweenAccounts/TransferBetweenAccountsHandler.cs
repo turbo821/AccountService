@@ -1,13 +1,15 @@
-﻿using AccountService.Features.Accounts.Abstractions;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
+using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
-public class TransferBetweenAccountsHandler(StubDbContext db,
-    ICurrencyValidator currencyValidator) : IRequestHandler<TransferBetweenAccountsCommand>
+public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
+    ICurrencyValidator currencyValidator) : IRequestHandler<TransferBetweenAccountsCommand, MbResult<IReadOnlyList<TransactionIdDto>>>
 {
-    public Task Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
+    public Task<MbResult<IReadOnlyList<TransactionIdDto>>> Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
     {
         var fromAccount =  db.Accounts.Find(a => a.Id == request.FromAccountId && a.ClosedAt is null);
         var toAccount =  db.Accounts.Find(a => a.Id == request.ToAccountId && a.ClosedAt is null);
@@ -55,6 +57,10 @@ public class TransferBetweenAccountsHandler(StubDbContext db,
 
         db.Transactions.AddRange(debitTransaction, creditTransaction);
 
-        return Task.CompletedTask;
+        var debitTransactionIdDto = mapper.Map<TransactionIdDto>(debitTransaction);
+        var creditTransactionIdDto = mapper.Map<TransactionIdDto>(creditTransaction);
+
+        return Task.FromResult(
+            new MbResult<IReadOnlyList<TransactionIdDto>>([debitTransactionIdDto, creditTransactionIdDto]));  
     }
 }

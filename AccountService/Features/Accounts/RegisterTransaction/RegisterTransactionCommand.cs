@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
@@ -16,7 +17,7 @@ public record RegisterTransactionCommand(
     string Currency,
     TransactionType Type,
     string Description
-) : IRequest<Guid>;
+) : IRequest<MbResult<TransactionIdDto>>;
 
 /// <summary>
 /// Запрос на регистрацию транзакции.

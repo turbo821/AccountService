@@ -1,8 +1,9 @@
-﻿using AccountService.Exceptions;
+﻿using AccountService.Application.Exceptions;
 using JetBrains.Annotations;
 using System.Text.Json;
+using AccountService.Application.Models;
 
-namespace AccountService.Middlewares;
+namespace AccountService.Application.Middlewares;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
@@ -18,12 +19,9 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)ex.StatusCode;
 
-            var result = JsonSerializer.Serialize(new ErrorResponse
-            {
-                Message = ex.Message,
-                Errors = ex.Errors.Any() ? ex.Errors : null
-            });
+            var error = new MbError(ex.Message, ex.Errors);
 
+            var result = JsonSerializer.Serialize(new MbResult<object>(error));
             await context.Response.WriteAsync(result);
         }
         catch (Exception ex)
@@ -32,16 +30,11 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
 
             context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new ErrorResponse { Message = ex.Message }));
+
+            var error = new MbError(ex.Message);
+            var result = JsonSerializer.Serialize(new MbResult<object>(error));
+
+            await context.Response.WriteAsync(result);
         }
     }
-}
-
-/// <summary>
-/// Ответ при ошибке
-/// </summary>
-public class ErrorResponse
-{
-    public required string Message { get; set; }
-    public IDictionary<string, string[]>? Errors { get; set; }
 }

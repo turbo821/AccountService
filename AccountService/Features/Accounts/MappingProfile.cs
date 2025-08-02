@@ -35,6 +35,14 @@ public class MappingProfile : Profile
                 opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.Transactions, 
                 opt => opt.MapFrom(src => src.Transactions));
+
+        CreateMap<Account, AccountIdDto>()
+            .ForMember(dest => dest.AccountId, 
+                opt => opt.MapFrom(src => src.Id));
+
+        CreateMap<Transaction, TransactionIdDto>()
+            .ForMember(dest => dest.TransactionId, 
+                opt => opt.MapFrom(src => src.Id));
     }
 }
 

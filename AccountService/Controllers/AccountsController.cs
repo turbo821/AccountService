@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.CheckOwnerAccounts;
 using AccountService.Features.Accounts.CreateAccount;
 using AccountService.Features.Accounts.DeleteAccount;
@@ -9,7 +10,6 @@ using AccountService.Features.Accounts.RegisterTransaction;
 using AccountService.Features.Accounts.TransferBetweenAccounts;
 using AccountService.Features.Accounts.UpdateAccount;
 using AccountService.Features.Accounts.UpdateInterestRate;
-using AccountService.Middlewares;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,12 +28,12 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="command">Команда с данными для создания счёта.</param>
     /// <returns>ID созданного счёта.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<AccountIdDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAccountCommand command)
     {
-        var accountId = await mediator.Send(command);
-        return Ok(new { AccountId = accountId });
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -42,12 +42,12 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="ownerId">ID владельца счетов (опционально).</param>
     /// <returns>Список счетов.</returns>
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AccountDto>))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<IReadOnlyList<AccountDto>>))]
     public async Task<IActionResult> GetAccountList([FromQuery] Guid? ownerId)
     {
         var query = new GetAccountListQuery(ownerId);
-        var accounts = await mediator.Send(query);
-        return Ok(accounts);
+        var response = await mediator.Send(query);
+        return Ok(response);
     }
 
     /// <summary>
@@ -56,14 +56,14 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="id">ID счёта.</param>
     /// <returns>Информация о счёте.</returns>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<AccountDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> GetAccountById(Guid id)
     {
         var query = new GetAccountByIdQuery(id);
-        var account = await mediator.Send(query);
-        return Ok(account);
+        var response = await mediator.Send(query);
+        return Ok(response);
     }
 
     /// <summary>
@@ -72,9 +72,9 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="id">ID изменяемого счета.</param>
     /// <param name="request">Запрос с данными на изменение счета.</param>
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> UpdateAccount(Guid id, [FromBody] UpdateAccountRequest request)
     {
         var command = new UpdateAccountCommand(
@@ -87,8 +87,8 @@ public class AccountsController(IMediator mediator) : ControllerBase
             request.OpenedAt
         );
 
-        var accountId = await mediator.Send(command);
-        return Ok(new { AccountId = accountId });
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -98,14 +98,14 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="request">Запрос с новой процентной ставкой.</param>
     /// <returns>Статус выполнения.</returns>
     [HttpPatch("{id:guid}/interest-rate")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateInterestRateRequest request)
     {
         var command = new UpdateInterestRateCommand(id, request.InterestRate);
-        await mediator.Send(command);
-        return Ok();
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -114,14 +114,14 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="id">ID счёта.</param>
     /// <returns>ID закрытого счёта.</returns>
     [HttpDelete("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<AccountIdDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> DeleteAccount(Guid id)
     {
         var command = new DeleteAccountCommand(id);
-        var accountId = await mediator.Send(command);
-        return Ok(new { AccountId = accountId });
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -131,9 +131,9 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="request">Данные о транзакции.</param>
     /// <returns>ID созданной транзакции.</returns>
     [HttpPost("{accountId:guid}/transactions")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<TransactionIdDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> RegisterTransaction(Guid accountId, [FromBody] RegisterTransactionRequest request)
     {
         var command = new RegisterTransactionCommand(
@@ -143,8 +143,8 @@ public class AccountsController(IMediator mediator) : ControllerBase
             request.Type,
             request.Description
         );
-        var transactionId = await mediator.Send(command);
-        return Ok(new { TransactionId = transactionId });
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -153,13 +153,13 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="command">Команда перевода между счетами.</param>
     /// <returns>Статус выполнения.</returns>
     [HttpPost("transfer")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<IReadOnlyList<TransactionIdDto>>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> TransferBetweenAccounts([FromBody] TransferBetweenAccountsCommand command)
     {
-        await mediator.Send(command);
-        return Ok();
+        var response = await mediator.Send(command);
+        return Ok(response);
     }
 
     /// <summary>
@@ -170,14 +170,14 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="toDate">Дата окончания периода (опционально).</param>
     /// <returns>Выписка по счёту.</returns>
     [HttpGet("{accountId:guid}/transactions")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountStatementDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<AccountStatementDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> GetAccountStatement(Guid accountId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
         var query = new GetAccountStatementQuery(accountId, fromDate, toDate);
-        var accountTransactionsDto = await mediator.Send(query);
-        return Ok(accountTransactionsDto);
+        var response = await mediator.Send(query);
+        return Ok(response);
     }
 
     /// <summary>
@@ -186,13 +186,13 @@ public class AccountsController(IMediator mediator) : ControllerBase
     /// <param name="ownerId">Идентификатор владельца.</param>
     /// <returns>Информация о счетах владельца.</returns>
     [HttpGet("check-owner/{ownerId:guid}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CheckOwnerAccountsDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrorResponse))]
-    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrorResponse))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MbResult<CheckOwnerAccountsDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(MbResult<Unit>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(MbResult<Unit>))]
     public async Task<IActionResult> CheckOwnerAccounts(Guid ownerId)
     {
         var query = new CheckOwnerAccountsQuery(ownerId);
-        var checkOwnerAccountsDto = await mediator.Send(query);
-        return Ok(checkOwnerAccountsDto);
+        var response = await mediator.Send(query);
+        return Ok(response);
     }
 }
