@@ -69,12 +69,12 @@ dotnet run
 
 ## Структура проекта
 
+- **`Application`**
+  * Содержит общие модели для приложения.
 - **`Features`**
   * Содержит список директорий для каждого слайса, содержащий общий функционал для конкретной сущности.
 - **`Features/Accounts`**
   * Содержит модели, интерфейсы и компоненты MediatR, связанные с `Account`.
-- **`Exceptions`**
-  * Содержит кастомные исключения.
 - **`Infrastructure`**
   * Содержит реализацию сервисов, связанных со внешними источниками.
 - **`Middlewares`**
@@ -99,7 +99,11 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "11329a35-0c15-4191-aff7-c59c8e395614"
+  "success": true,
+  "data": {
+    "accountId": "11329a35-0c15-4191-aff7-c59c8e395614"
+  },
+  "error": null
 }
 ```
 
@@ -109,17 +113,21 @@ dotnet run
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
-[
-  {
-    "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
-    "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
-    "type": "Checking",
-    "currency": "USD",
-    "balance": 1000,
-    "interestRate": null,
-    "openedAt": "2025-07-28T00:52:18.5161679Z"
-  }
-]
+{
+  "success": true,
+  "data": [
+    {
+      "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
+      "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
+      "type": "Checking",
+      "currency": "USD",
+      "balance": 1000,
+      "interestRate": null,
+      "openedAt": "2025-07-28T00:52:18.5161679Z"
+    }
+  ],
+  "error": null
+}
 ```
 
 ### 3. Получение счёта по ID
@@ -129,13 +137,17 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
-  "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
-  "type": "Checking",
-  "currency": "USD",
-  "balance": 1000,
-  "interestRate": null,
-  "openedAt": "2025-07-28T00:52:18.5161679Z"
+  "success": true,
+  "data": {
+    "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
+    "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
+    "type": "Checking",
+    "currency": "USD",
+    "balance": 1000,
+    "interestRate": null,
+    "openedAt": "2025-07-28T00:52:18.5161679Z"
+  },
+  "error": null
 }
 ```
 
@@ -156,7 +168,9 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  "success": true,
+  "data": {},
+  "error": null
 }
 ```
 
@@ -170,6 +184,13 @@ dotnet run
 }
 ```
 *   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
 
 ### 6. Закрытие счёта (мягкое удаление)
 *   **Endpoint:** `DELETE /accounts/{id}`
@@ -178,7 +199,11 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "55dcfa45-03e0-49ae-9cce-44b167251328"
+  "success": true,
+  "data": {
+    "accountId": "55dcfa45-03e0-49ae-9cce-44b167251328"
+  },
+  "error": null
 }
 ```
 
@@ -197,7 +222,11 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "transactionId": "dad8ebfd-52d5-4c5f-b70d-527c5502ecf2"
+  "success": true,
+  "data": {
+    "transactionId": "dad8ebfd-52d5-4c5f-b70d-527c5502ecf2"
+  },
+  "error": null
 }
 ```
 
@@ -215,6 +244,20 @@ dotnet run
 }
 ```
 *   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "transactionId": "0e294688-657f-4f3f-a59a-1d5de8c48bde"
+    }, 
+    {
+      "transactionId": "cb69a295-b13f-43d8-bca5-c8a99b5f04ff"
+    },
+  ],
+  "error": null
+}
+```
 
 ### 9. Выдача выписки клиенту по счету
 *   **Endpoint:** `GET /accounts/{accountId}/transactions?fromDate={fromDate?}&toDate={toDate?}`
@@ -223,21 +266,25 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "type": "Checking",
-  "balance": 0,
-  "transactions": [
-    {
-      "transactionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "counterpartyAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "amount": 0,
-      "currency": "string",
-      "type": "Debit",
-      "description": "string",
-      "timestamp": "2025-07-28T01:09:26.544Z"
-    }
-  ]
+  "success": true,
+  "data": {
+    "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "type": "Checking",
+    "balance": 0,
+    "transactions": [
+      {
+        "transactionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "counterpartyAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "amount": 0,
+        "currency": "string",
+        "type": "Debit",
+        "description": "string",
+        "timestamp": "2025-07-28T01:09:26.544Z"
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
@@ -248,9 +295,13 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "accountExists": true,
-  "accountCount": 1
+  "success": true,
+  "data": {
+    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "accountExists": true,
+    "accountCount": 1
+  },
+  "error": null
 }
 ```
 

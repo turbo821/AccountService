@@ -3,7 +3,7 @@ using System.Net;
 using AccountService.Application.Exceptions;
 using FluentValidation;
 
-namespace AccountService.Application.Middlewares;
+namespace AccountService.Application.Behaviors;
 
 public class ExceptionBehavior<TRequest, TResponse>(
     ILogger<ExceptionBehavior<TRequest, TResponse>> logger)

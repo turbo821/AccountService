@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using System.Text.Json;
 using AccountService.Application.Models;
 
-namespace AccountService.Application.Middlewares;
+namespace AccountService.Middlewares;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {

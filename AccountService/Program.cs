@@ -1,11 +1,16 @@
-using AccountService.Application.Middlewares;
+using AccountService.Application.Behaviors;
 using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AccountService.Infrastructure.Services;
+using AccountService.Middlewares;
 using FluentValidation;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
+using AccountService.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,18 +43,30 @@ builder.Services.AddAutoMapper(cfg
 builder.Services.AddScoped<IOwnerVerificator, OwnerVerificatorStub>();
 builder.Services.AddScoped<ICurrencyValidator, CurrencyValidatorStub>();
 
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.RequireHttpsMetadata = false;
+        o.Audience = builder.Configuration["Keycloak:Audience"];
+        o.MetadataAddress = builder.Configuration["Keycloak:MetadataAddress"]!;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Keycloak:ValidIssue"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Keycloak:Audience"],
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
     {
         opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-builder.Services.AddSwaggerGen(options =>
-{
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    options.IncludeXmlComments(xmlPath);
-});
+builder.Services.AddSwaggerGenWithAuth(builder.Configuration);
 
 var app = builder.Build();
 
@@ -59,6 +76,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseMiddleware<ExceptionMiddleware>();
 

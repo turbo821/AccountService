@@ -1,0 +1,46 @@
+{
+  "realm": "auth-service",
+  "enabled": true,
+  "sslRequired": "none",
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test123"
+        }
+      ]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123"
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "account-api",
+      "enabled": true,
+      "publicClient": true,
+      "secret": "myapp-client-secret",
+      "redirectUris": [
+        "http://localhost:80/swagger/oauth2-redirect.html",
+        "http://localhost/swagger/oauth2-redirect.html"
+      ],
+      "webOrigins": [
+        "http://localhost",
+        "http://localhost:80"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": true,
+      "directAccessGrantsEnabled": true
+    }
+  ]
+}

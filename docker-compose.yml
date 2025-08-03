@@ -1,10 +1,25 @@
 services:
-  api:
+  accountservice:
     image: account-service
+    container_name: AccountService
     build:
       context: .
       dockerfile: AccountService/Dockerfile
     ports:
-      - "80:8080"
+      - 80:8080
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest  
+    container_name: Keycloak
+    command: start-dev --import-realm
+    environment:
+      - KC_HEALTH_ENABLE=true
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    volumes:
+      - ./keycloak/realmsettings.json:/opt/keycloak/data/import/realm.json
+      - ./.containers:/opt/keykcloak/data       
+    ports:
+      - 8080:8080
