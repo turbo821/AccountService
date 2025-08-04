@@ -11,7 +11,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest  
+    image: quay.io/keycloak/keycloak:22.0.2  
     container_name: Keycloak
     command: start-dev --import-realm
     environment:
@@ -19,7 +19,7 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     volumes:
-      - ./keycloak/realmsettings.json:/opt/keycloak/data/import/realm.json
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
       - ./.containers:/opt/keykcloak/data       
     ports:
       - 8080:8080

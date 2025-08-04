@@ -4,22 +4,13 @@
   "sslRequired": "none",
   "users": [
     {
-      "username": "testuser",
+      "username": "tom",
       "enabled": true,
       "credentials": [
         {
           "type": "password",
-          "value": "test123"
-        }
-      ]
-    },
-    {
-      "username": "admin",
-      "enabled": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin123"
+          "value": "pass123",
+          "temporary": false
         }
       ]
     }
@@ -29,7 +20,6 @@
       "clientId": "account-api",
       "enabled": true,
       "publicClient": true,
-      "secret": "myapp-client-secret",
       "redirectUris": [
         "http://localhost:80/swagger/oauth2-redirect.html",
         "http://localhost/swagger/oauth2-redirect.html"
