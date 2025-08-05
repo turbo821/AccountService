@@ -38,10 +38,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapControllers();
 

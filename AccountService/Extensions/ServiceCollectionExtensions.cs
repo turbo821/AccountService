@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using AccountService.Application;
+using AccountService.Application.Abstractions;
 
 namespace AccountService.Extensions;
 
@@ -94,7 +94,7 @@ public  static class ServiceCollectionExtensions
 
             options.AddSecurityDefinition("Keycloak JWT", new OpenApiSecurityScheme
             {
-                Description = "2 Способ: Введите токен, полученный в /auth/token",
+                Description = "2 Способ: Введите токен (accessToken), полученный в методе /auth/token",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,

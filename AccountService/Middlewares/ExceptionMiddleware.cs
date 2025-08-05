@@ -1,4 +1,5 @@
-﻿using AccountService.Application.Exceptions;
+﻿using System.Net;
+using AccountService.Application.Exceptions;
 using JetBrains.Annotations;
 using System.Text.Json;
 using AccountService.Application.Models;
@@ -13,6 +14,10 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         try
         {
             await next(context);
+
+            if (context.Response.StatusCode == StatusCodes.Status401Unauthorized)
+                throw new ApiException(HttpStatusCode.Unauthorized, 
+                    "Unauthorized, user don't have access rights to the requested resource");
         }
         catch (ApiException ex)
         {

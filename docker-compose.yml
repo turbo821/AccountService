@@ -9,6 +9,15 @@ services:
       - 80:8080
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - Keycloak__ClientId=account-api
+      - Keycloak__AuthorizationUrl=http://localhost:8080/realms/auth-service/protocol/openid-connect/auth
+      - Keycloak__TokenUrl=http://keycloak:8080/realms/auth-service/protocol/openid-connect/token
+      - Keycloak__MetadataAddress=http://keycloak:8080/realms/auth-service/.well-known/openid-configuration
+      - Keycloak__ValidIssue=http://localhost:8080/realms/auth-service
+      - TestUser__Username=tom
+      - TestUser__Password=pass123
+    depends_on:
+      - keycloak
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.2  
@@ -23,3 +32,8 @@ services:
       - ./.containers:/opt/keykcloak/data       
     ports:
       - 8080:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
