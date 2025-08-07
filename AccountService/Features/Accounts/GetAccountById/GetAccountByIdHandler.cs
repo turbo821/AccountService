@@ -1,4 +1,5 @@
-﻿using AccountService.Infrastructure.Persistence;
+﻿using AccountService.Application.Models;
+using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
 
@@ -6,9 +7,9 @@ namespace AccountService.Features.Accounts.GetAccountById;
 
 public class GetAccountByIdHandler(
     StubDbContext db, IMapper mapper) 
-    : IRequestHandler<GetAccountByIdQuery, AccountDto>
+    : IRequestHandler<GetAccountByIdQuery, MbResult<AccountDto>>
 {
-    public Task<AccountDto> Handle(GetAccountByIdQuery request, CancellationToken cancellationToken)
+    public Task<MbResult<AccountDto>> Handle(GetAccountByIdQuery request, CancellationToken cancellationToken)
     {
         var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
@@ -17,6 +18,6 @@ public class GetAccountByIdHandler(
 
         var accountDto = mapper.Map<AccountDto>(account);
 
-        return Task.FromResult(accountDto);
+        return Task.FromResult(new MbResult<AccountDto>(accountDto));
     }
 }

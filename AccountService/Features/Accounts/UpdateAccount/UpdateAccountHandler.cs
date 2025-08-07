@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts.Abstractions;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
@@ -8,9 +9,9 @@ namespace AccountService.Features.Accounts.UpdateAccount;
 public class UpdateAccountHandler(
     IMapper mapper, StubDbContext db,
     ICurrencyValidator currencyValidator,
-    IOwnerVerificator ownerVerificator) : IRequestHandler<UpdateAccountCommand, Guid>
+    IOwnerVerificator ownerVerificator) : IRequestHandler<UpdateAccountCommand, MbResult<Unit>>
 {
-    public Task<Guid> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
+    public Task<MbResult<Unit>> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
@@ -32,6 +33,6 @@ public class UpdateAccountHandler(
         
         db.Accounts.Add(account); // Change to Update operation
 
-        return Task.FromResult(account.Id);
+        return Task.FromResult(new MbResult<Unit>(Unit.Value));
     }
 }

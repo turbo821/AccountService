@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.DeleteAccount;
 
@@ -6,4 +7,4 @@ namespace AccountService.Features.Accounts.DeleteAccount;
 /// Команда для удаления банковского счёта по его ID.
 /// </summary>
 /// <param name="AccountId">ID счета</param>
-public record DeleteAccountCommand(Guid AccountId) : IRequest<Guid>;
+public record DeleteAccountCommand(Guid AccountId) : IRequest<MbResult<AccountIdDto>>;

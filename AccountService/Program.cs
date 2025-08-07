@@ -1,30 +1,23 @@
-using AccountService.Features.Accounts;
-using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
-using AccountService.Infrastructure.Services;
 using AccountService.Middlewares;
-using FluentValidation;
-using System.Reflection;
 using System.Text.Json.Serialization;
+using AccountService.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<StubDbContext>();
-
-builder.Services.AddMediatR(cfg =>
+builder.Services.AddCors(options =>
 {
-    cfg.RegisterServicesFromAssemblyContaining<Program>();
-    cfg.AddOpenBehavior(typeof(ExceptionBehavior<,>));
-    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 
-builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-
-builder.Services.AddAutoMapper(cfg 
-    => cfg.AddProfile<MappingProfile>());
-
-builder.Services.AddScoped<IOwnerVerificator, OwnerVerificatorStub>();
-builder.Services.AddScoped<ICurrencyValidator, CurrencyValidatorStub>();
+builder.Services.AddServices();
+builder.Services.AddAuth(builder.Configuration);
+builder.Services.AddSwaggerGenWithAuth(builder.Configuration);
 
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
@@ -32,22 +25,23 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-builder.Services.AddSwaggerGen(options =>
-{
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    options.IncludeXmlComments(xmlPath);
-});
-
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.OAuthClientId(builder.Configuration["Keycloak:ClientId"]);
+        options.OAuthScopes("openid", "profile", "email", "roles");
+    });
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

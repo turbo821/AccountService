@@ -1,11 +1,13 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
 using AccountService.Infrastructure.Persistence;
+using AutoMapper;
+using MediatR;
 
 namespace AccountService.Features.Accounts.DeleteAccount;
 
-public class DeleteAccountHandler(StubDbContext db) : IRequestHandler<DeleteAccountCommand, Guid>
+public class DeleteAccountHandler(StubDbContext db, IMapper mapper) : IRequestHandler<DeleteAccountCommand, MbResult<AccountIdDto>>
 {
-    public  Task<Guid> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
+    public  Task<MbResult<AccountIdDto>> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
         var account = db.Accounts
             .Find(x => x.Id == request.AccountId);
@@ -18,6 +20,7 @@ public class DeleteAccountHandler(StubDbContext db) : IRequestHandler<DeleteAcco
 
         account.ClosedAt = DateTime.UtcNow;
 
-        return Task.FromResult(account.Id);
+        var accountIdDto = mapper.Map<AccountIdDto>(account);
+        return Task.FromResult(new MbResult<AccountIdDto>(accountIdDto));
     }
 }

@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountById;
 
@@ -6,4 +7,4 @@ namespace AccountService.Features.Accounts.GetAccountById;
 /// Запрос на получение информации о счёте по его идентификатору.
 /// </summary>
 /// <param name="AccountId">ID счёта.</param>
-public record GetAccountByIdQuery(Guid AccountId) : IRequest<AccountDto>;
+public record GetAccountByIdQuery(Guid AccountId) : IRequest<MbResult<AccountDto>>;

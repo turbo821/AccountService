@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AccountService.Application.Models;
+using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountStatement;
 
@@ -12,4 +13,4 @@ public record GetAccountStatementQuery(
     Guid AccountId, 
     DateTime? From, 
     DateTime? To
-    ) : IRequest<AccountStatementDto>;
+    ) : IRequest<MbResult<AccountStatementDto>>;

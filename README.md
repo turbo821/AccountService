@@ -7,8 +7,9 @@
 - [Требования](#требования)
 - [Как запустить](#как-запустить)
 - [Структура проекта](#структура-проекта)
+- [Конфигурация Keycloak](#конфигурация-keycloak)
+- [Аутентификация](#аутентификация)
 - [Описание API](#описание-api)
-
 ---
 
 ## Описание
@@ -29,52 +30,53 @@
 
 - Swagger / OpenAPI — генерация Swagger UI для документации API
 
+- Docker / Docker Compose - развертывание проекта в контейнере
+
+- Keycloak - OAuth 2.0 сервис аутентификации/авторизации
+
 ---
 
 ## Требования
 
 .NET SDK 9 или новее
 
-Visual Studio 2022 или возможность запуска из командной строки с dotnet CLI
+Visual Studio 2022
+
+Docker Desktop (или Docker Engine + Docker Compose)
 
 ---
 
 ## Как запустить
 
-### В Visual Studio 2022
-1. Клонируйте репозиторий.
-2. Откройте решение в Visual Studio 2022.
-3. Запустите проект через Debug (F5) или без отладки (Ctrl+F5).
-4. Откройте Swagger UI по адресу http://localhost:5177/swagger для тестирования API.
-
-### Через командную строку
+### Запуск в Docker Compose
 1. Клонируйте репозиторий:
 ```bash
 git clone https://github.com/turbo821/AccountService.git
+cd AccountService
 ```
-2. Перейдите в каталог проекта:
+2. Запустите сервисы через Docker Compose:
 ```bash
-cd ./AccountService/AccountService
+docker-compose up -d
 ```
-3. Соберите проект:
-```bash
-dotnet build
-```
-4. Запустите проект:
-```bash
-dotnet run
-```
-5. Откройте Swagger UI по адресу http://localhost:5177/swagger для тестирования API.
+3. Немного подождите, сервис Keycloak требует время для старта.
+4. Откройте Swagger UI по адресу http://localhost:80/swagger для тестирования API.
+
+(Аналогично можно запустить в Visual Studio 2022, выбрав проект Docker Compose)
+
 ---
 
 ## Структура проекта
 
+- **`Application`**
+  * Содержит общие модели для всего приложения.
+- **`Controllers`**
+  * Содержит контролеры API.
+- **`Extensions`**
+  * Содержит классы расширения.
 - **`Features`**
   * Содержит список директорий для каждого слайса, содержащий общий функционал для конкретной сущности.
 - **`Features/Accounts`**
   * Содержит модели, интерфейсы и компоненты MediatR, связанные с `Account`.
-- **`Exceptions`**
-  * Содержит кастомные исключения.
 - **`Infrastructure`**
   * Содержит реализацию сервисов, связанных со внешними источниками.
 - **`Middlewares`**
@@ -82,10 +84,39 @@ dotnet run
 
 ---
 
+## Конфигурация Keycloak
+
+Сервис использует предварительно настроенный Keycloak:
+- Realm: `auth-service`
+- Клиент: `account-api`
+- Тестовый пользователь: `tom` / `pass123`
+
+Для кастомной настройки:
+1. Откройте админ-панель: http://localhost:8080
+2. Импортируйте конфигурацию из `./keycloak/realm-export.json`
+
+---
+
+## Аутентификация
+API поддерживает два способа авторизации:
+1. **OAuth2 через Keycloak**  
+   - Использует implicit flow для Swagger UI  
+   - Тестовый пользователь: `tom` / `pass123`  
+   - Client: `account-api`
+   - Клиент вводится в Keycloak OAuth2.0 после чего редиректится в Keycloak форму входа, где нужно ввести тестовые данные
+
+2. **JWT токен**  
+   - Получает токен через `/auth/token` 
+   - Вводится в поле Keycloak JWT 
+   - Автоматически передается в заголовке `Authorization: Bearer <токен>`
+
+---
+
 ## Описание API
 
 ### 1. Создание счёта
 *   **Endpoint:** `POST /accounts`
+*   **Требуется авторизация** 
 *   **Описание:** Создаёт новый банковский счёт с нулевым балансом.
 *   **Тело запроса:**
 ```json
@@ -99,18 +130,48 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "11329a35-0c15-4191-aff7-c59c8e395614"
+  "success": true,
+  "data": {
+    "accountId": "11329a35-0c15-4191-aff7-c59c8e395614"
+  },
+  "error": null
 }
 ```
 
 ### 2. Получение списка счётов
 *   **Endpoint:** `GET /accounts?ownerId={ownerId?}`
+*   **Требуется авторизация** 
 *   **Описание:** Возвращает список всех открытых счетов (опционально для конкретного владельца).
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
-[
-  {
+{
+  "success": true,
+  "data": [
+    {
+      "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
+      "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
+      "type": "Checking",
+      "currency": "USD",
+      "balance": 1000,
+      "interestRate": null,
+      "openedAt": "2025-07-28T00:52:18.5161679Z"
+    }
+  ],
+  "error": null
+}
+```
+
+### 3. Получение счёта по ID
+*   **Endpoint:** `GET /accounts/{id}`
+*   **Требуется авторизация** 
+*   **Описание:** Возвращает информацию о конкретном счёте по его ID.
+*   **Тело запроса:** Пустое
+*   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": {
     "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
     "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
     "type": "Checking",
@@ -118,29 +179,14 @@ dotnet run
     "balance": 1000,
     "interestRate": null,
     "openedAt": "2025-07-28T00:52:18.5161679Z"
-  }
-]
-```
-
-### 3. Получение счёта по ID
-*   **Endpoint:** `GET /accounts/{id}`
-*   **Описание:** Возвращает информацию о конкретном счёте по его ID.
-*   **Тело запроса:** Пустое
-*   **Успешный ответ:** `200 OK`.
-```json
-{
-  "id": "55dcfa45-03e0-49ae-9cce-44b167251328",
-  "ownerId": "f6af2260-9c81-4178-98f5-696742700fa6",
-  "type": "Checking",
-  "currency": "USD",
-  "balance": 1000,
-  "interestRate": null,
-  "openedAt": "2025-07-28T00:52:18.5161679Z"
+  },
+  "error": null
 }
 ```
 
 ### 4. Изменение счета по ID
 *   **Endpoint:** `PUT /accounts/{id}`
+*   **Требуется авторизация** 
 *   **Описание:** Изменяет данные счёта по его ID.
 *   **Тело запроса:**
 ```json
@@ -156,12 +202,15 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  "success": true,
+  "data": {},
+  "error": null
 }
 ```
 
 ### 5. Изменение процентной ставки счёта
 *   **Endpoint:** `PATCH /accounts/{id}/interest-rate`
+*   **Требуется авторизация** 
 *   **Описание:** Обновляет процентную ставку по счёту.
 *   **Тело запроса:**
 ```json
@@ -170,20 +219,33 @@ dotnet run
 }
 ```
 *   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
 
 ### 6. Закрытие счёта (мягкое удаление)
 *   **Endpoint:** `DELETE /accounts/{id}`
+*   **Требуется авторизация** 
 *   **Описание:** Закрывает счёт по его ID. Альтернатива мягкого удаления.
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "55dcfa45-03e0-49ae-9cce-44b167251328"
+  "success": true,
+  "data": {
+    "accountId": "55dcfa45-03e0-49ae-9cce-44b167251328"
+  },
+  "error": null
 }
 ```
 
 ### 7. Регистрация транзакции по счёту
 *   **Endpoint:** `POST /accounts/{accountId}/transactions`
+*   **Требуется авторизация** 
 *   **Описание:** Регистрирует транзакцию по счёту (пополнение или списание).
 *   **Тело запроса:**
 ```json
@@ -197,12 +259,17 @@ dotnet run
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "transactionId": "dad8ebfd-52d5-4c5f-b70d-527c5502ecf2"
+  "success": true,
+  "data": {
+    "transactionId": "dad8ebfd-52d5-4c5f-b70d-527c5502ecf2"
+  },
+  "error": null
 }
 ```
 
 ### 8. Выполнение перевода между счётами
 *   **Endpoint:** `POST /accounts/transfer`
+*   **Требуется авторизация** 
 *   **Описание:** Переводит средства между двумя счетами. Регистрация по одной транзакций (пополнение или списание) для обоих счетов.
 *   **Тело запроса:**
 ```json
@@ -215,42 +282,88 @@ dotnet run
 }
 ```
 *   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "transactionId": "0e294688-657f-4f3f-a59a-1d5de8c48bde"
+    }, 
+    {
+      "transactionId": "cb69a295-b13f-43d8-bca5-c8a99b5f04ff"
+    },
+  ],
+  "error": null
+}
+```
 
 ### 9. Выдача выписки клиенту по счету
 *   **Endpoint:** `GET /accounts/{accountId}/transactions?fromDate={fromDate?}&toDate={toDate?}`
+*   **Требуется авторизация** 
 *   **Описание:** Возвращает выписку по счету за определенный период.
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "type": "Checking",
-  "balance": 0,
-  "transactions": [
-    {
-      "transactionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "counterpartyAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "amount": 0,
-      "currency": "string",
-      "type": "Debit",
-      "description": "string",
-      "timestamp": "2025-07-28T01:09:26.544Z"
-    }
-  ]
+  "success": true,
+  "data": {
+    "accountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "type": "Checking",
+    "balance": 0,
+    "transactions": [
+      {
+        "transactionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "counterpartyAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "amount": 0,
+        "currency": "string",
+        "type": "Debit",
+        "description": "string",
+        "timestamp": "2025-07-28T01:09:26.544Z"
+      }
+    ]
+  },
+  "error": null
 }
 ```
 
 ### 10. Проверка наличия счёта у клиента
 *   **Endpoint:** `GET /accounts/check-owner/{ownerId}`
+*   **Требуется авторизация** 
 *   **Описание:** Проверяет наличие счетов у клиента.
 *   **Тело запроса:** Пустое
 *   **Успешный ответ:** `200 OK`.
 ```json
 {
-  "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "accountExists": true,
-  "accountCount": 1
+  "success": true,
+  "data": {
+    "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "accountExists": true,
+    "accountCount": 1
+  },
+  "error": null
+}
+```
+
+### 11. Получение токена доступа (используются данные тестового пользователя)
+*   **Endpoint:** `GET /auth/token`
+*   **Без авторизации**
+*   **Описание:** Получает AccessToken для входа. 
+*   **Используемые данные:**
+```
+client_id: account-api
+username: tom
+password: pass123
+```
+*   **Тело запроса:** Пустое
+*   **Успешный ответ:** `200 OK`.
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJSUzI1Ni...."
+  },
+  "error": null
 }
 ```
 

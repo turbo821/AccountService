@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts.Abstractions;
+﻿using AccountService.Application.Models;
+using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
@@ -9,9 +10,9 @@ public class CreateAccountHandler(
     IMapper mapper, StubDbContext db,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator)
-    : IRequestHandler<CreateAccountCommand, Guid>
+    : IRequestHandler<CreateAccountCommand, MbResult<AccountIdDto>>
 {
-    public Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
+    public Task<MbResult<AccountIdDto>> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new ArgumentException("Client with this ID not found");
@@ -23,6 +24,7 @@ public class CreateAccountHandler(
 
         db.Accounts.Add(account);
 
-        return Task.FromResult(account.Id);
+        var accountIdDto = mapper.Map<AccountIdDto>(account);
+        return Task.FromResult(new MbResult<AccountIdDto>(accountIdDto));
     }
 }
