@@ -5,18 +5,18 @@ using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountStatement;
 
-public class GetAccountStatementHandler(StubDbContext db, IMapper mapper)
+public class GetAccountStatementHandler(AppDbContext db, IMapper mapper)
     : IRequestHandler<GetAccountStatementQuery, MbResult<AccountStatementDto>>
 {
     public Task<MbResult<AccountStatementDto>> Handle(GetAccountStatementQuery request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
+        var account = db.Accounts2
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account == null)
             throw new KeyNotFoundException($"Account {request.AccountId} not found");
 
-        var transactions = db.Transactions
+        var transactions = db.Transactions2
             .Where(t => t.AccountId == account.Id)
             .Where(t => !request.From.HasValue || t.Timestamp >= request.From.Value)
             .Where(t => !request.To.HasValue || t.Timestamp <= request.To.Value)

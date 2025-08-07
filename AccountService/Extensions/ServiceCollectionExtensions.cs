@@ -9,15 +9,27 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using AccountService.Application.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace AccountService.Extensions;
 
 public  static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddDatabase(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddDbContext<AppDbContext>(options => options
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")
+        ));
+
+        return services;
+    }
+
     public static IServiceCollection AddServices(
         this IServiceCollection services)
     {
-        services.AddSingleton<StubDbContext>();
+        services.AddSingleton<AppDbContext>();
 
         services.AddMediatR(cfg =>
         {
@@ -94,7 +106,7 @@ public  static class ServiceCollectionExtensions
 
             options.AddSecurityDefinition("Keycloak JWT", new OpenApiSecurityScheme
             {
-                Description = "2 Способ: Введите токен (accessToken), полученный в методе /auth/token",
+                Description = "2 Способ: Введите accessToken, полученный в методе /auth/token",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,

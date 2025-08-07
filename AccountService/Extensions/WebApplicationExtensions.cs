@@ -1,18 +1,26 @@
 ﻿using AccountService.Features.Accounts;
+using AccountService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
-namespace AccountService.Infrastructure.Persistence;
+namespace AccountService.Extensions;
 
-public class StubDbContext
+public static class WebApplicationExtensions
 {
-    public List<Account> Accounts { get; set; }
-    public List<Transaction> Transactions { get; set; }
-
-    public StubDbContext()
+    public static async Task DatabaseInitializeAsync(this IHost app)
     {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await db.Database.MigrateAsync();
+
+        if (await db.Accounts.AnyAsync())
+            return;
+
         var accounts = new List<Account>
         {
             new()
             {
+                Id = Guid.NewGuid(),
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Checking,
                 Currency = "USD",
@@ -21,15 +29,17 @@ public class StubDbContext
             },
             new()
             {
+                Id = Guid.NewGuid(),
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Deposit,
                 Currency = "RUB",
                 Balance = 10000m,
-                InterestRate = 0.01m, 
+                InterestRate = 0.01m,
                 OpenedAt = DateTime.UtcNow
             },
             new()
             {
+                Id = Guid.NewGuid(),
                 OwnerId = Guid.NewGuid(),
                 Type = AccountType.Checking,
                 Currency = "RUB",
@@ -38,10 +48,12 @@ public class StubDbContext
                 OpenedAt = new DateTime(2021, 10, 5)
             }
         };
+
         var transactions = new List<Transaction>
         {
             new()
             {
+                Id = Guid.NewGuid(),
                 AccountId = accounts[0].Id,
                 Amount = 100m,
                 Currency = "USD",
@@ -51,18 +63,25 @@ public class StubDbContext
             },
             new()
             {
+                Id = Guid.NewGuid(),
                 AccountId = accounts[1].Id,
                 Amount = 50m,
-                Currency = "RUS",
+                Currency = "RUB",
                 Type = TransactionType.Credit,
                 Description = "Initial credit",
                 Timestamp = DateTime.UtcNow
             }
         };
 
-        accounts.ForEach(account => account.Transactions.AddRange(transactions.Where(t => t.AccountId == account.Id)));
+        //accounts.ForEach(account =>
+        //{
+        //    var related = transactions.Where(t => t.AccountId == account.Id).ToList();
+        //    account.Transactions2.AddRange(related);
+        //});
 
-        Accounts = accounts;
-        Transactions = transactions;
+        db.Accounts.AddRange(accounts);
+        db.Transactions.AddRange(transactions);
+
+        await db.SaveChangesAsync();
     }
 }

@@ -7,13 +7,13 @@ using MediatR;
 namespace AccountService.Features.Accounts.UpdateAccount;
 
 public class UpdateAccountHandler(
-    IMapper mapper, StubDbContext db,
+    IMapper mapper, AppDbContext db,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator) : IRequestHandler<UpdateAccountCommand, MbResult<Unit>>
 {
     public Task<MbResult<Unit>> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
+        var account = db.Accounts2
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account is null)
@@ -27,11 +27,11 @@ public class UpdateAccountHandler(
 
         request.OpenedAt ??= account.OpenedAt;
 
-        db.Accounts.Remove(account); // Change to Update operation
+        db.Accounts2.Remove(account); // Change to Update operation
 
         account = mapper.Map<Account>(request);
         
-        db.Accounts.Add(account); // Change to Update operation
+        db.Accounts2.Add(account); // Change to Update operation
 
         return Task.FromResult(new MbResult<Unit>(Unit.Value));
     }

@@ -4,11 +4,11 @@ using MediatR;
 
 namespace AccountService.Features.Accounts.UpdateInterestRate;
 
-public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<UpdateInterestRateCommand, MbResult<Unit>>
+public class UpdateInterestRateHandler(AppDbContext db) : IRequestHandler<UpdateInterestRateCommand, MbResult<Unit>>
 {
     public Task<MbResult<Unit>> Handle(UpdateInterestRateCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
+        var account = db.Accounts2
             .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account is null)

@@ -6,13 +6,13 @@ using MediatR;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
-public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
+public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<TransferBetweenAccountsCommand, MbResult<IReadOnlyList<TransactionIdDto>>>
 {
     public Task<MbResult<IReadOnlyList<TransactionIdDto>>> Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
     {
-        var fromAccount =  db.Accounts.Find(a => a.Id == request.FromAccountId && a.ClosedAt is null);
-        var toAccount =  db.Accounts.Find(a => a.Id == request.ToAccountId && a.ClosedAt is null);
+        var fromAccount =  db.Accounts2.Find(a => a.Id == request.FromAccountId && a.ClosedAt is null);
+        var toAccount =  db.Accounts2.Find(a => a.Id == request.ToAccountId && a.ClosedAt is null);
 
         if (fromAccount is null)
             throw new KeyNotFoundException("Sender account not found");
@@ -24,7 +24,7 @@ public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
             throw new ArgumentException("Unsupported currency");
 
         if (!toAccount.Currency.Equals(fromAccount.Currency))
-            throw new ArgumentException("Accounts with different currencies");
+            throw new ArgumentException("Accounts2 with different currencies");
 
         if(!toAccount.Currency.Equals(request.Currency.ToUpperInvariant()))
             throw new ArgumentException("Transaction currency is different from recipient account currency");
@@ -55,7 +55,7 @@ public class TransferBetweenAccountsHandler(StubDbContext db, IMapper mapper,
         fromAccount.ConductTransaction(creditTransaction);
         toAccount.ConductTransaction(debitTransaction);
 
-        db.Transactions.AddRange(debitTransaction, creditTransaction);
+        db.Transactions2.AddRange(debitTransaction, creditTransaction);
 
         var debitTransactionIdDto = mapper.Map<TransactionIdDto>(debitTransaction);
         var creditTransactionIdDto = mapper.Map<TransactionIdDto>(creditTransaction);

@@ -6,12 +6,12 @@ using MediatR;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
-public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
+public class RegisterTransactionHandler(AppDbContext db, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, MbResult<TransactionIdDto>>
 {
     public Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = db.Accounts2.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
 
         if (account == null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
@@ -25,7 +25,7 @@ public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
         var transaction = mapper.Map<Transaction>(request);
 
         account.ConductTransaction(transaction);
-        db.Transactions.Add(transaction);
+        db.Transactions2.Add(transaction);
 
         var transactionIdDto = mapper.Map<TransactionIdDto>(transaction);
         return Task.FromResult(new MbResult<TransactionIdDto>(transactionIdDto));
