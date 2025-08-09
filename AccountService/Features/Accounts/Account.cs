@@ -13,6 +13,7 @@ public class Account
     public decimal? InterestRate { get; set; }
     public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ClosedAt { get; set; }
+    public long Version { get; set; }
 
     public List<Transaction> Transactions { get; set; } = [];
 

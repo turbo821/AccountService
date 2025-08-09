@@ -8,15 +8,15 @@ public enum AccountType
     /// <summary>
     /// Расчетный счёт (обычный счёт для операций).
     /// </summary>
-    Checking,
+    Checking = 0,
 
     /// <summary>
     /// Сберегательный счёт (для накоплений с процентами).
     /// </summary>
-    Deposit,
+    Deposit = 1,
 
     /// <summary>
     /// Кредитный счёт (для получения кредитов).
     /// </summary>
-    Credit
+    Credit = 2
 }

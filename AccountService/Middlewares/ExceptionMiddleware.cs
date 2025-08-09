@@ -31,7 +31,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unexpected error");
+            logger.LogError(ex, "Unexpected error: {ExMessage}", ex.Message);
 
             context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";

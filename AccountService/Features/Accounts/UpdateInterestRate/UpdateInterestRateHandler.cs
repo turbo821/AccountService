@@ -1,6 +1,7 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.UpdateInterestRate;
 
@@ -17,7 +18,10 @@ public class UpdateInterestRateHandler(IAccountRepository repo) : IRequestHandle
             throw new ArgumentException("Interest rate must not be set for Checking accounts");
 
         account.InterestRate = request.InterestRate;
-        await repo.UpdateInterestRateAsync(account);
+
+        var updated = await repo.UpdateInterestRateAsync(account);
+        if (updated == 0)
+            throw new DBConcurrencyException("Account was modified by another process");
 
         return new MbResult<Unit>(Unit.Value);
     }

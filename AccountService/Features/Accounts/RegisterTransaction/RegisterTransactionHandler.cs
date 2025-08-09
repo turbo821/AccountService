@@ -2,6 +2,7 @@
 using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
@@ -10,26 +11,31 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 {
     public async Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
-        var account = await repo.GetByIdAsync(request.AccountId);
-
-        if (account == null)
-            throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
-
         if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
-        if (!account.Currency.Equals(request.Currency.ToUpperInvariant()))
-            throw new ArgumentException("Transaction currency is different from account currency");
-
-        var transaction = mapper.Map<Transaction>(request);
-
-        account.ConductTransaction(transaction);
+        Transaction transaction;
 
         using var dbTransaction = repo.BeginTransaction();
-
         try
         {
-            await repo.UpdateBalanceAsync(account, dbTransaction);
+            var account = await repo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
+
+            if (account == null)
+                throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
+
+            if (!account.Currency.Equals(request.Currency, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Transaction currency is different from account currency");
+
+            transaction = mapper.Map<Transaction>(request);
+
+            account.ConductTransaction(transaction);
+
+
+            var updated = await repo.UpdateBalanceAsync(account, dbTransaction);
+            if (updated == 0)
+                throw new DBConcurrencyException("Account was modified by another transaction");
+
             await repo.AddTransactionAsync(transaction, dbTransaction);
 
             dbTransaction.Commit();

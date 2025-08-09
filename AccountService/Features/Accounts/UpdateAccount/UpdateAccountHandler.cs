@@ -2,6 +2,7 @@
 using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.UpdateAccount;
 
@@ -28,8 +29,11 @@ public class UpdateAccountHandler(
         var newAccount = mapper.Map<Account>(request);
 
         newAccount.Id = account.Id;
+        newAccount.Version = account.Version;
 
-        await repo.UpdateAsync(newAccount);
+        var updated = await repo.UpdateAsync(newAccount);
+        if (updated == 0)
+            throw new DBConcurrencyException("Account was modified by another process");
 
         return new MbResult<Unit>(Unit.Value);
     }

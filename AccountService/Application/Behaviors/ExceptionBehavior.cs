@@ -1,7 +1,8 @@
-﻿using MediatR;
-using System.Net;
-using AccountService.Application.Exceptions;
+﻿using AccountService.Application.Exceptions;
 using FluentValidation;
+using MediatR;
+using System.Data;
+using System.Net;
 
 namespace AccountService.Application.Behaviors;
 
@@ -44,6 +45,11 @@ public class ExceptionBehavior<TRequest, TResponse>(
         {
             logger.LogWarning(ex, "Validation failed: {Request}", typeof(TRequest).Name);
             throw new ApiException(HttpStatusCode.BadRequest, ex.Message);
+        }
+        catch (DBConcurrencyException ex)
+        {
+            logger.LogError(ex, "Concurrency Conflict: {Request}", typeof(TRequest).Name);
+            throw new ApiException(HttpStatusCode.Conflict, ex.Message);
         }
         catch (Exception ex)
         {
