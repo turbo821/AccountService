@@ -24,7 +24,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     /// <response code="200">Token доступа получен</response>
     /// <response code="401">Сервер аутентификации недоступен или данные неверны</response>
     [HttpGet("token")]
-    [ProducesResponseType(typeof(MbResult<Unit>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MbResult<AccessTokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(MbResult<Unit>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetToken()
     {

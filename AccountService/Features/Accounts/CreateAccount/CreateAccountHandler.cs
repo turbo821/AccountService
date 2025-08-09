@@ -16,7 +16,7 @@ public class CreateAccountHandler(
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new ArgumentException("Client with this ID not found");
 
-        if (!currencyValidator.IsExists(request.Currency))
+        if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
         var account = mapper.Map<Account>(request);

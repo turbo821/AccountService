@@ -1,23 +1,23 @@
 ﻿using AccountService.Application.Models;
-using AccountService.Infrastructure.Persistence;
+using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountById;
 
 public class GetAccountByIdHandler(
-    AppDbContext db, IMapper mapper) 
+    IAccountRepository repo, IMapper mapper) 
     : IRequestHandler<GetAccountByIdQuery, MbResult<AccountDto>>
 {
-    public Task<MbResult<AccountDto>> Handle(GetAccountByIdQuery request, CancellationToken cancellationToken)
+    public async Task<MbResult<AccountDto>> Handle(GetAccountByIdQuery request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts2.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = await repo.GetByIdAsync(request.AccountId);
 
         if (account == null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
         var accountDto = mapper.Map<AccountDto>(account);
 
-        return Task.FromResult(new MbResult<AccountDto>(accountDto));
+        return new MbResult<AccountDto>(accountDto);
     }
 }

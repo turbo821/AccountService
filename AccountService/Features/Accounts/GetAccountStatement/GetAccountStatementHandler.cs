@@ -1,30 +1,23 @@
 ﻿using AccountService.Application.Models;
-using AccountService.Infrastructure.Persistence;
+using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.GetAccountStatement;
 
-public class GetAccountStatementHandler(AppDbContext db, IMapper mapper)
+public class GetAccountStatementHandler(IAccountRepository repo, IMapper mapper)
     : IRequestHandler<GetAccountStatementQuery, MbResult<AccountStatementDto>>
 {
-    public Task<MbResult<AccountStatementDto>> Handle(GetAccountStatementQuery request, CancellationToken cancellationToken)
+    public async Task<MbResult<AccountStatementDto>> Handle(GetAccountStatementQuery request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts2
-            .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = await repo
+            .GetByIdWithTransactionsForPeriodAsync(request.AccountId, request.From, request.To);
 
         if (account == null)
             throw new KeyNotFoundException($"Account {request.AccountId} not found");
 
-        var transactions = db.Transactions2
-            .Where(t => t.AccountId == account.Id)
-            .Where(t => !request.From.HasValue || t.Timestamp >= request.From.Value)
-            .Where(t => !request.To.HasValue || t.Timestamp <= request.To.Value)
-            .ToList();
-
-        account.Transactions = transactions;
         var accountTransactionsDto = mapper.Map<AccountStatementDto>(account);
 
-        return Task.FromResult(new MbResult<AccountStatementDto>(accountTransactionsDto));
+        return new MbResult<AccountStatementDto>(accountTransactionsDto);
     }
 }

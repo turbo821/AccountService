@@ -28,7 +28,7 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-await app.DatabaseInitializeAsync();
+app.RunMigrations();
 
 app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())

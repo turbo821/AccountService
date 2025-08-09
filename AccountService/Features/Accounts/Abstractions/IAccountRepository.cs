@@ -1,12 +1,19 @@
-﻿namespace AccountService.Features.Accounts.Abstractions;
+﻿using System.Data;
+
+namespace AccountService.Features.Accounts.Abstractions;
 
 public interface IAccountRepository
 {
-    Task<Account?> GetByIdAsync(Guid id);
-    Task<List<Account>> GetAllAsync();
-    Task<List<Account>> GetByOwnerIdAsync(Guid ownerId);
+    Task<List<Account>> GetAllAsync(Guid? ownerId);
+    Task<Account?> GetByIdAsync(Guid accountId);
+    Task<Account?> GetByIdWithTransactionsForPeriodAsync(Guid accountId, DateTime? from, DateTime? to);
+    Task<int> GetCountByOwnerIdAsync(Guid ownerId);
     Task AddAsync(Account account);
     Task UpdateAsync(Account account);
-    Task<Guid?> SoftDeleteAsync(Account account);
-    Task<bool> ExistsAsync(Guid id);
+    Task UpdateBalanceAsync(Account account, IDbTransaction? transaction = null);
+    Task UpdateInterestRateAsync(Account account);
+    Task<Guid?> SoftDeleteAsync(Guid accountId);
+
+    Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
+    IDbTransaction BeginTransaction();
 }

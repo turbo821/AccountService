@@ -13,13 +13,11 @@ public class CheckOwnerAccountsHandler(IAccountRepository repo,
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new KeyNotFoundException("Client with this ID not found");
 
-        var accounts = await repo.GetByOwnerIdAsync(request.OwnerId);
-        accounts ??= [];
+        var accountCount = await repo.GetCountByOwnerIdAsync(request.OwnerId);
 
         CheckOwnerAccountsDto dto;
 
-
-        if (accounts.Count == 0)
+        if (accountCount == 0)
         {
             dto = new CheckOwnerAccountsDto
             {
@@ -33,7 +31,7 @@ public class CheckOwnerAccountsHandler(IAccountRepository repo,
             {
                 OwnerId = request.OwnerId,
                 AccountExists = true,
-                AccountCount = accounts.Count
+                AccountCount = accountCount
             };
         }
 

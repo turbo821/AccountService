@@ -1,18 +1,17 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
-public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
+public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<TransferBetweenAccountsCommand, MbResult<IReadOnlyList<TransactionIdDto>>>
 {
-    public Task<MbResult<IReadOnlyList<TransactionIdDto>>> Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
+    public async Task<MbResult<IReadOnlyList<TransactionIdDto>>> Handle(TransferBetweenAccountsCommand request, CancellationToken cancellationToken)
     {
-        var fromAccount =  db.Accounts2.Find(a => a.Id == request.FromAccountId && a.ClosedAt is null);
-        var toAccount =  db.Accounts2.Find(a => a.Id == request.ToAccountId && a.ClosedAt is null);
+        var fromAccount = await repo.GetByIdAsync(request.FromAccountId);
+        var toAccount = await repo.GetByIdAsync(request.ToAccountId);
 
         if (fromAccount is null)
             throw new KeyNotFoundException("Sender account not found");
@@ -20,7 +19,7 @@ public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
         if (toAccount is null)
             throw new KeyNotFoundException("Recipient account not found");
 
-        if (!currencyValidator.IsExists(request.Currency))
+        if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
         if (!toAccount.Currency.Equals(fromAccount.Currency))
@@ -34,8 +33,8 @@ public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
 
         var creditTransaction = new Transaction
         {
-            AccountId = request.ToAccountId,
-            CounterpartyAccountId = request.FromAccountId,
+            AccountId = request.FromAccountId,
+            CounterpartyAccountId = request.ToAccountId,
             Amount = request.Amount,
             Currency = request.Currency,
             Type = TransactionType.Credit,
@@ -44,8 +43,8 @@ public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
 
         var debitTransaction = new Transaction
         {
-            AccountId = request.FromAccountId,
-            CounterpartyAccountId = request.ToAccountId,
+            AccountId = request.ToAccountId,
+            CounterpartyAccountId = request.FromAccountId,
             Amount = request.Amount,
             Currency = request.Currency,
             Type = TransactionType.Debit,
@@ -55,12 +54,26 @@ public class TransferBetweenAccountsHandler(AppDbContext db, IMapper mapper,
         fromAccount.ConductTransaction(creditTransaction);
         toAccount.ConductTransaction(debitTransaction);
 
-        db.Transactions2.AddRange(debitTransaction, creditTransaction);
+        using var dbTransaction = repo.BeginTransaction();
+        try
+        {
+            await repo.UpdateBalanceAsync(fromAccount, dbTransaction);
+            await repo.UpdateBalanceAsync(toAccount, dbTransaction);
+
+            await repo.AddTransactionAsync(debitTransaction, dbTransaction);
+            await repo.AddTransactionAsync(creditTransaction, dbTransaction);
+
+            dbTransaction.Commit();
+        }
+        catch
+        {
+            dbTransaction.Rollback();
+            throw;
+        }
 
         var debitTransactionIdDto = mapper.Map<TransactionIdDto>(debitTransaction);
         var creditTransactionIdDto = mapper.Map<TransactionIdDto>(creditTransaction);
 
-        return Task.FromResult(
-            new MbResult<IReadOnlyList<TransactionIdDto>>([debitTransactionIdDto, creditTransactionIdDto]));  
+        return new MbResult<IReadOnlyList<TransactionIdDto>>([debitTransactionIdDto, creditTransactionIdDto]);  
     }
 }

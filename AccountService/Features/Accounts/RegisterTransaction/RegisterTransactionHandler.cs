@@ -1,22 +1,21 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
-public class RegisterTransactionHandler(AppDbContext db, IMapper mapper,
+public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, MbResult<TransactionIdDto>>
 {
-    public Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts2.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = await repo.GetByIdAsync(request.AccountId);
 
         if (account == null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
-        if (!currencyValidator.IsExists(request.Currency))
+        if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
         if (!account.Currency.Equals(request.Currency.ToUpperInvariant()))
@@ -25,9 +24,23 @@ public class RegisterTransactionHandler(AppDbContext db, IMapper mapper,
         var transaction = mapper.Map<Transaction>(request);
 
         account.ConductTransaction(transaction);
-        db.Transactions2.Add(transaction);
+
+        using var dbTransaction = repo.BeginTransaction();
+
+        try
+        {
+            await repo.UpdateBalanceAsync(account, dbTransaction);
+            await repo.AddTransactionAsync(transaction, dbTransaction);
+
+            dbTransaction.Commit();
+        }
+        catch
+        {
+            dbTransaction.Rollback();
+            throw;
+        }
 
         var transactionIdDto = mapper.Map<TransactionIdDto>(transaction);
-        return Task.FromResult(new MbResult<TransactionIdDto>(transactionIdDto));
+        return new MbResult<TransactionIdDto>(transactionIdDto);
     }
 }
