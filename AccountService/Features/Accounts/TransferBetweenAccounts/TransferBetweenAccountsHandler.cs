@@ -3,7 +3,6 @@ using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
 using System.Data;
-using System.Transactions;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
 
@@ -33,12 +32,6 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
 
             if (!toAccount.Currency.Equals(fromAccount.Currency))
                 throw new ArgumentException("Accounts with different currencies");
-
-            if (!string.Equals(fromAccount.Currency, request.Currency, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(toAccount.Currency, request.Currency, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("Transaction currency mismatch");
-            }
 
             creditTransaction = new Transaction
             {

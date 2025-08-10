@@ -19,7 +19,7 @@ namespace AccountService.Controllers;
 /// <summary>
 /// Контроллер для управления банковскими счетами.
 /// </summary>
-// [Authorize]
+[Authorize]
 [ApiController]
 [Route("/accounts")]
 public class AccountsController(IMediator mediator) : ControllerBase

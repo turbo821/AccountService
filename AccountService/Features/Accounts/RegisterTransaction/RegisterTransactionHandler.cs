@@ -24,13 +24,9 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
             if (account == null)
                 throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
-            if (!account.Currency.Equals(request.Currency, StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException("Transaction currency is different from account currency");
-
             transaction = mapper.Map<Transaction>(request);
 
             account.ConductTransaction(transaction);
-
 
             var updated = await repo.UpdateBalanceAsync(account, dbTransaction);
             if (updated == 0)

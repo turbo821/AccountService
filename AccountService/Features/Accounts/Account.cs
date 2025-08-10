@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using Azure.Core;
+using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts;
 
@@ -19,6 +20,9 @@ public class Account
 
     public void ConductTransaction(Transaction transaction)
     {
+        if (!Currency.Equals(transaction.Currency, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Transaction currency is different from account currency");
+
         switch (transaction.Type)
         {
             case TransactionType.Credit when Balance < transaction.Amount:

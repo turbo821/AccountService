@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		keycloak\realm-export.json = keycloak\realm-export.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Tests", "AccountService.Tests\AccountService.Tests.csproj", "{6D396366-F430-4B35-9FD3-6E348ABD581E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,10 @@ Global
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D396366-F430-4B35-9FD3-6E348ABD581E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D396366-F430-4B35-9FD3-6E348ABD581E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D396366-F430-4B35-9FD3-6E348ABD581E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D396366-F430-4B35-9FD3-6E348ABD581E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

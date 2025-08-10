@@ -41,7 +41,7 @@ public class UpdateAccountValidator : AbstractValidator<UpdateAccountCommand>
             .WithMessage("Interest rate must not be set for Checking accounts");
 
         RuleFor(x => x.OpenedAt)
-            .Must(date => date == null || date <= DateTime.UtcNow)
+            .Must(date => date == null || date <= DateTime.UtcNow.AddDays(1))
             .WithMessage("Opened date must be in the past or null");
     }
 }
