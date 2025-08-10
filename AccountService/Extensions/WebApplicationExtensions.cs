@@ -1,4 +1,7 @@
-﻿using FluentMigrator.Runner;
+﻿using AccountService.Features.Accounts.Abstractions;
+using FluentMigrator.Runner;
+using Hangfire;
+using Hangfire.Dashboard;
 
 namespace AccountService.Extensions;
 
@@ -22,4 +25,27 @@ public static class WebApplicationExtensions
         return app;
     }
 
+    public static WebApplication UseHangfire(this WebApplication app)
+    {
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            Authorization = [new HangfireAuthorizationFilter()]
+        });
+
+        RecurringJob.AddOrUpdate<IInterestAccrualService>(
+            "accrue-interest-daily",
+            s => s.AccrueDailyInterestAsync(),
+            Cron.Daily
+        );
+
+        return app;
+    }
+}
+
+public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
+{
+    public bool Authorize(DashboardContext context)
+    {
+        return true;
+    }
 }

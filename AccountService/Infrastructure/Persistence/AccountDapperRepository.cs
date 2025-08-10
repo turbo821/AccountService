@@ -223,14 +223,12 @@ public class AccountDapperRepository(IDbConnection connection,
         }, dbTransaction);
     }
 
-    public async Task<decimal> AccrueInterestAsync(Guid accountId, IDbTransaction? dbTransaction = null)
+    public async Task AccrueInterestForAllAsync(IDbTransaction? transaction = null)
     {
-        const string sql = "SELECT * FROM accrue_interest(@AccountId)";
-
-        return await connection.ExecuteScalarAsync<decimal>(
-            sql,
-            new { AccountId = accountId },
-            dbTransaction);
+        await connection.ExecuteAsync(
+            "SELECT accrue_interest_all()",
+            transaction: transaction
+        );
     }
 
     public IDbTransaction BeginTransaction()

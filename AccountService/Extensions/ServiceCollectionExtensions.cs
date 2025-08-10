@@ -11,6 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Data;
 using System.Reflection;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Npgsql;
 
 namespace AccountService.Extensions;
@@ -23,7 +25,7 @@ public  static class ServiceCollectionExtensions
     {
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-        services.AddSingleton<IDbConnection>(_
+        services.AddScoped<IDbConnection>(_
             => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddFluentMigratorCore()
@@ -60,9 +62,25 @@ public  static class ServiceCollectionExtensions
         services.AddHttpClient();
         services.AddScoped<IAuthService, AuthService>();
 
+        services.AddScoped<IInterestAccrualService, InterestAccrualService>();
+
         return services;
     }
 
+    public static IServiceCollection AddHangfireWithPostgres(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddHangfire(config =>
+            config.UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(opt =>
+                    opt.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))
+                    ));
+
+        services.AddHangfireServer();
+        return services;
+    }
     public static IServiceCollection AddAuth(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -82,6 +100,7 @@ public  static class ServiceCollectionExtensions
                 };
             });
 
+        // services.AddHangfire()
         return services;
     }
 

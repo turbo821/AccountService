@@ -29,7 +29,7 @@ public class CreateAccrueInterestProcedure : Migration
                 current_balance := deposit_account.balance;
                 interest_rate := deposit_account.interest_rate;
                 
-                interest_amount := current_balance * interest_rate / 365;
+                interest_amount := current_balance * (interest_rate / 100) / 365;
                 
                 UPDATE accounts 
                 SET balance = balance + interest_amount 

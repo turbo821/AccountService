@@ -16,6 +16,6 @@ public interface IAccountRepository
     Task<Guid?> SoftDeleteAsync(Guid accountId);
 
     Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
-    Task<decimal> AccrueInterestAsync(Guid accountId, IDbTransaction? dbTransaction = null);
+    Task AccrueInterestForAllAsync(IDbTransaction? transaction = null);
     IDbTransaction BeginTransaction();
 }
