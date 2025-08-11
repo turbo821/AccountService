@@ -5,7 +5,7 @@ namespace AccountService.Tests.UnitTests;
 public class AccountTests
 {
     [Fact]
-    public void ConductTransaction_Credit_WithSufficientFunds_ShouldDecreaseBalance()
+    public void ConductTransactionCredit_WithSufficientFunds_ShouldDecreaseBalance()
     {
         // Arrange
         var account = new Account
@@ -97,7 +97,7 @@ public class AccountTests
             Balance = 100m,
             Currency = "USD",
             OwnerId = Guid.NewGuid(),
-            Type = AccountType.Checking,
+            Type = AccountType.Checking
         };
 
         var transaction = new Transaction
@@ -134,7 +134,7 @@ public class AccountTests
             Description = "1"
         };
 
-        // Act && Assert
+        // Act & Assert
         Assert.Throws<ArgumentException>(() => account.ConductTransaction(transaction));
         Assert.Equal(100m, account.Balance);
         Assert.Empty(account.Transactions);

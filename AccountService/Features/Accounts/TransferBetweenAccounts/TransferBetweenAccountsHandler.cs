@@ -18,7 +18,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
         Transaction creditTransaction;
         Transaction debitTransaction;
 
-        using var dbTransaction = repo.BeginTransaction();
+        using var dbTransaction = await repo.BeginTransaction();
         try
         {
             var fromAccount = await repo.GetByIdForUpdateAsync(request.FromAccountId, dbTransaction);
@@ -30,7 +30,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
             if (toAccount is null)
                 throw new KeyNotFoundException("Recipient account not found");
 
-            if (!toAccount.Currency.Equals(fromAccount.Currency))
+            if (!toAccount.Currency.Equals(fromAccount.Currency, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Accounts with different currencies");
 
             creditTransaction = new Transaction
@@ -38,7 +38,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
                 AccountId = request.FromAccountId,
                 CounterpartyAccountId = request.ToAccountId,
                 Amount = request.Amount,
-                Currency = request.Currency,
+                Currency = request.Currency.ToUpperInvariant(),
                 Type = TransactionType.Credit,
                 Description = request.Description
             };
@@ -50,7 +50,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
                 AccountId = request.ToAccountId,
                 CounterpartyAccountId = request.FromAccountId,
                 Amount = request.Amount,
-                Currency = request.Currency,
+                Currency = request.Currency.ToUpperInvariant(),
                 Type = TransactionType.Debit,
                 Description = request.Description
             };
@@ -79,8 +79,8 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
         }
         catch
         {
-                dbTransaction.Rollback();
-                throw;
+            dbTransaction.Rollback();
+            throw;
         }
 
         var debitTransactionIdDto = mapper.Map<TransactionIdDto>(debitTransaction);

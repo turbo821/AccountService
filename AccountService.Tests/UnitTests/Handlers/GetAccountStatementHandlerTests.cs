@@ -16,7 +16,7 @@ public class GetAccountStatementHandlerTests
     {
         var config = new MapperConfiguration(cfg =>
         {
-            cfg.AddProfile<MappingProfile>(); // Предполагается, что у тебя есть маппинг Account → AccountStatementDto и Transaction → TransactionDto
+            cfg.AddProfile<MappingProfile>(); // Предполагается, что у тебя есть mapping Account → AccountStatementDto и Transaction → TransactionDto
         }, new LoggerFactory());
 
         _mapper = config.CreateMapper();

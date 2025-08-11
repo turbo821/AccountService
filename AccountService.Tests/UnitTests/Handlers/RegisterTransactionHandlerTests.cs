@@ -52,7 +52,7 @@ public class RegisterTransactionHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).Returns(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
             .ReturnsAsync(account);
         _repoMock.Setup(r => r.UpdateBalanceAsync(account, mockDbTransaction.Object))
@@ -122,7 +122,7 @@ public class RegisterTransactionHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).Returns(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
             .ReturnsAsync((Account?)null);
 
@@ -159,7 +159,7 @@ public class RegisterTransactionHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).Returns(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
             .ReturnsAsync(account);
         _repoMock.Setup(r => r.UpdateBalanceAsync(account, mockDbTransaction.Object))

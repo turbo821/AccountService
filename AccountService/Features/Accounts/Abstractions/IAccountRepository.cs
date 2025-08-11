@@ -17,5 +17,5 @@ public interface IAccountRepository
 
     Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
     Task AccrueInterestForAllAsync(IDbTransaction? transaction = null);
-    IDbTransaction BeginTransaction();
+    Task<IDbTransaction> BeginTransaction();
 }

@@ -13,7 +13,7 @@
 public record AccountDto(
     Guid Id,
     Guid OwnerId,
-    AccountType Type,
+    string Type,
     string Currency,
     decimal Balance,
     decimal? InterestRate,

@@ -20,7 +20,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Currency,
                 opt => opt.MapFrom(src => src.Currency.ToUpperInvariant()));
 
-        CreateMap<Account, AccountDto>();
+        CreateMap<Account, AccountDto>()
+            .ForMember(dest => dest.Type,
+                opt => opt.MapFrom(src => src.Type.ToString()));
 
         CreateMap<RegisterTransactionCommand, Transaction>()
             .ForMember(dest => dest.Currency,

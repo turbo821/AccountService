@@ -1,12 +1,12 @@
 ﻿using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using Dapper;
+using Npgsql;
 using System.Data;
 
 namespace AccountService.Infrastructure.Persistence;
 
-public class AccountDapperRepository(IDbConnection connection, 
-    ILogger<AccountDapperRepository> logger) : IAccountRepository
+public class AccountDapperRepository(IDbConnection connection) : IAccountRepository
 {
     public async Task<List<Account>> GetAllAsync(Guid? ownerId)
     {
@@ -231,11 +231,14 @@ public class AccountDapperRepository(IDbConnection connection,
         );
     }
 
-    public IDbTransaction BeginTransaction()
+    public async Task<IDbTransaction> BeginTransaction()
     {
-        if (connection.State != ConnectionState.Open)
-            connection.Open();
+        if (connection is not NpgsqlConnection conn)
+            throw new InvalidOperationException("Connection must be NpgsqlConnection");
 
-        return connection.BeginTransaction(IsolationLevel.Serializable);
+        if (conn.State != ConnectionState.Open)
+            await conn.OpenAsync();
+
+        return await conn.BeginTransactionAsync(IsolationLevel.Serializable);
     }
 }

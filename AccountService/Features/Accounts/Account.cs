@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
 namespace AccountService.Features.Accounts;
 

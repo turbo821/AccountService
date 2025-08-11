@@ -76,7 +76,7 @@ public class GetAccountListHandlerTests
 
             Assert.Equal(account.Id, dto.Id);
             Assert.Equal(account.OwnerId, dto.OwnerId);
-            Assert.Equal(account.Type, dto.Type);
+            Assert.Equal(account.Type.ToString(), dto.Type);
             Assert.Equal(account.Currency, dto.Currency);
             Assert.Equal(account.Balance, dto.Balance);
             Assert.Equal(account.InterestRate, dto.InterestRate);

@@ -32,7 +32,7 @@ public  static class ServiceCollectionExtensions
             .ConfigureRunner(rb => rb
                 .AddPostgres()
                 .WithGlobalConnectionString(configuration.GetConnectionString("DefaultConnection"))
-                .ScanIn(Assembly.GetExecutingAssembly()).For.Migrations())
+                .ScanIn(Assembly.GetAssembly(typeof(Account))).For.Migrations())
             .AddLogging(lb => lb.AddFluentMigratorConsole());
 
         return services;

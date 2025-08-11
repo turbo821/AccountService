@@ -33,4 +33,8 @@ public class MbResult<T>
         Data = default;
         Error = error;
     }
+
+    public MbResult()
+    {
+    }
 }

@@ -56,7 +56,7 @@ public class GetAccountByIdHandlerTests
 
         Assert.Equal(account.Id, result.Data.Id);
         Assert.Equal(account.OwnerId, result.Data.OwnerId);
-        Assert.Equal(account.Type, result.Data.Type);
+        Assert.Equal(account.Type.ToString(), result.Data.Type);
         Assert.Equal(account.Currency, result.Data.Currency);
         Assert.Equal(account.Balance, result.Data.Balance);
         Assert.Equal(account.InterestRate, result.Data.InterestRate);

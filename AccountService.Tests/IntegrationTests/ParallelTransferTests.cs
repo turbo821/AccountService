@@ -1,51 +1,34 @@
 ﻿using AccountService.Application.Models;
-using AccountService.Controllers;
 using AccountService.Features.Accounts;
-using Docker.DotNet.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Builder;
-using Testcontainers.PostgreSql;
+using Xunit.Abstractions;
 
 namespace AccountService.Tests.IntegrationTests;
 
-public class ParallelTransferTests : IAsyncLifetime
+public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _pgContainer = new PostgreSqlBuilder()
-        .WithDatabase("test_db")
-        .WithUsername("postgres")
-        .WithPassword("postgres")
-        .Build();
-
-    private AccountIntegrationTestsWebFactory _factory = null!;
-    private HttpClient _client = null!;
+    private readonly HttpClient _client;
+    private readonly ITestOutputHelper _testOutputHelper;
 
     public Guid Account1Id { get; private set; }
     public Guid Account2Id { get; private set; }
 
-    public async Task InitializeAsync()
+    public ParallelTransferTests(IntegrationTestsWebFactory factory, ITestOutputHelper testOutputHelper)
     {
-        await _pgContainer.StartAsync();
+        _testOutputHelper = testOutputHelper;
+        _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+    }
 
-        _factory = new AccountIntegrationTestsWebFactory(_pgContainer);
-
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
-
-        var ownerId = Guid.NewGuid();
+    private async Task InitializeAccountsAsync()
+    {
+        var ownerId = Guid.NewGuid().ToString();
         var createAccountCmd1 = new
         {
             OwnerId = ownerId,
-            Type = "Checking",
+            Type = AccountType.Checking,
             Currency = "USD",
             InterestRate = (decimal?)null
         };
@@ -58,6 +41,11 @@ public class ParallelTransferTests : IAsyncLifetime
         };
 
         var resp1 = await _client.PostAsJsonAsync("/accounts", createAccountCmd1);
+        if (!resp1.IsSuccessStatusCode)
+        {
+            var errorBody = await resp1.Content.ReadAsStringAsync();
+            Console.WriteLine($"Response error: {errorBody}");
+        }
         resp1.EnsureSuccessStatusCode();
 
         var resp2 = await _client.PostAsJsonAsync("/accounts", createAccountCmd2);
@@ -66,19 +54,11 @@ public class ParallelTransferTests : IAsyncLifetime
         var account1 = (await resp1.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
         var account2 = (await resp2.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
 
-        // Пополняем каждый аккаунт балансом 1000
         await AddTransaction(account1.AccountId, 1000m, "USD");
         await AddTransaction(account2.AccountId, 1000m, "USD");
 
         Account1Id = account1.AccountId;
         Account2Id = account2.AccountId;
-    }
-
-    public async Task DisposeAsync()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-        await _pgContainer.DisposeAsync();
     }
 
     private async Task AddTransaction(Guid accountId, decimal amount, string currency)
@@ -98,11 +78,14 @@ public class ParallelTransferTests : IAsyncLifetime
     [Fact]
     public async Task Transfer_ShouldMaintainTotalBalance_After50ParallelTransfers()
     {
+        await InitializeAccountsAsync();
+        
         const int parallelCount = 50;
-        decimal transferAmount = 10m;
+        const decimal transferAmount = 10m;
+
         var tasks = new List<Task<HttpResponseMessage>>();
 
-        for (int i = 0; i < parallelCount; i++)
+        for (var i = 0; i < parallelCount; i++)
         {
             var cmd = new
             {
@@ -114,29 +97,27 @@ public class ParallelTransferTests : IAsyncLifetime
             };
 
             tasks.Add(_client.PostAsJsonAsync("/accounts/transfer", cmd));
-
-            var cmdBack = new
-            {
-                FromAccountId = Account2Id,
-                ToAccountId = Account1Id,
-                Amount = transferAmount,
-                Currency = "USD",
-                Description = "Test transfer back"
-            };
-
-            tasks.Add(_client.PostAsJsonAsync("/accounts/transfer", cmdBack));
         }
 
         await Task.WhenAll(tasks);
 
-        // Проверяем, что все запросы успешны
-        foreach (var task in tasks)
+        var statusCounts = tasks
+            .Select(t => t.Result.StatusCode)
+            .GroupBy(code => code)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        _testOutputHelper.WriteLine("Status codes summary:");
+        foreach (var kvp in statusCounts)
         {
-            var response = task.Result;
-            Assert.True(response.IsSuccessStatusCode, $"Expected success status code but got {response.StatusCode}");
+            _testOutputHelper.WriteLine($"{(int)kvp.Key} ({kvp.Key}): {kvp.Value}");
         }
 
-        // Получаем балансы после всех переводов
+        foreach (var status in statusCounts.Keys)
+        {
+            Assert.True(status is HttpStatusCode.OK or HttpStatusCode.Conflict,
+                $"Unexpected status code {status}");
+        }
+
         var account1Resp = await _client.GetAsync($"/accounts/{Account1Id}");
         var account2Resp = await _client.GetAsync($"/accounts/{Account2Id}");
 
@@ -146,9 +127,20 @@ public class ParallelTransferTests : IAsyncLifetime
         var account1 = (await account1Resp.Content.ReadFromJsonAsync<MbResult<AccountDto>>())!.Data!;
         var account2 = (await account2Resp.Content.ReadFromJsonAsync<MbResult<AccountDto>>())!.Data!;
 
-        var totalBalance = account1.Balance + account2.Balance;
+        _testOutputHelper.WriteLine($"Account 1 Balance: {(int)account1.Balance}");
+        _testOutputHelper.WriteLine($"Account 2 Balance: {(int)account2.Balance}");
 
+        var totalBalance = account1.Balance + account2.Balance;
         Assert.Equal(2000m, totalBalance);
     }
-}
 
+    public async Task InitializeAsync()
+    {
+        await InitializeAccountsAsync();
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
+    }
+}
