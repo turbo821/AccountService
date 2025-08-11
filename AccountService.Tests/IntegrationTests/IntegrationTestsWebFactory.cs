@@ -1,4 +1,6 @@
-﻿using FluentMigrator.Runner;
+﻿using AccountService.Features.Accounts;
+using DotNet.Testcontainers.Builders;
+using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -7,25 +9,32 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using AccountService.Features.Accounts;
 using Testcontainers.PostgreSql;
 
 namespace AccountService.Tests.IntegrationTests;
 
-public class IntegrationTestsWebFactory : WebApplicationFactory<Program>
+public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    [SuppressMessage("ReSharper", "StringLiteralTypo")]
     private readonly PostgreSqlContainer _postgresContainer = new PostgreSqlBuilder()
         .WithDatabase("test_db")
         .WithUsername("postgres")
         .WithPassword("postgres")
         .WithImage("postgres:17")
+        .WithWaitStrategy(Wait.ForUnixContainer()
+            .UntilPortIsAvailable(5432)
+            .UntilCommandIsCompleted("pg_isready -U postgres"))
         .Build();
 
-    public IntegrationTestsWebFactory()
+    public async Task InitializeAsync()
     {
-        _postgresContainer.StartAsync().GetAwaiter().GetResult();
+        await _postgresContainer.StartAsync();
+
+        await WaitForPostgresReady(_postgresContainer.GetConnectionString());
+
         ApplyMigrations();
     }
 
@@ -65,9 +74,27 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>
         runner.MigrateUp();
     }
 
-    public new async ValueTask DisposeAsync()
+    public new async Task DisposeAsync()
     {
         await _postgresContainer.DisposeAsync();
+    }
+
+    private static async Task WaitForPostgresReady(string connectionString)
+    {
+        for (var i = 0; i < 50; i++)
+        {
+            try
+            {
+                await using var conn = new NpgsqlConnection(connectionString);
+                await conn.OpenAsync();
+                return;
+            }
+            catch
+            {
+                await Task.Delay(500);
+            }
+        }
+        throw new Exception("Postgres did not become ready in time.");
     }
 }
 
