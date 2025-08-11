@@ -74,7 +74,7 @@ docker-compose up -d
 4. Откройте Swagger UI по адресу http://localhost:80/swagger для тестирования API.
 5. По адресу http://localhost:80/hangfire будет доступен Hangfire для теста Cron-Jobs.
    
-### Запуск в Docker Compose в Visual Studio
+### Запуск Docker Compose в Visual Studio
 1.  Клонируйте репозиторий, запустите файл AccountService.sln.
 2.  Запустите профиль Docker-Compose в Visual Studio.
 3. Немного подождите, сервисы Keycloak и PostgreSQL требуют время для старта.  
