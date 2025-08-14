@@ -1,15 +1,15 @@
 ﻿using AccountService.Application.Models;
-using AccountService.Infrastructure.Persistence;
+using AccountService.Features.Accounts.Abstractions;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.UpdateInterestRate;
 
-public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<UpdateInterestRateCommand, MbResult<Unit>>
+public class UpdateInterestRateHandler(IAccountRepository repo) : IRequestHandler<UpdateInterestRateCommand, MbResult<Unit>>
 {
-    public Task<MbResult<Unit>> Handle(UpdateInterestRateCommand request, CancellationToken cancellationToken)
+    public async Task<MbResult<Unit>> Handle(UpdateInterestRateCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
-            .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = await repo.GetByIdAsync(request.AccountId);
 
         if (account is null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
@@ -19,6 +19,10 @@ public class UpdateInterestRateHandler(StubDbContext db) : IRequestHandler<Updat
 
         account.InterestRate = request.InterestRate;
 
-        return Task.FromResult(new MbResult<Unit>(Unit.Value));
+        var updated = await repo.UpdateInterestRateAsync(account);
+        if (updated == 0)
+            throw new DBConcurrencyException("Account was modified by another process");
+
+        return new MbResult<Unit>(Unit.Value);
     }
 }

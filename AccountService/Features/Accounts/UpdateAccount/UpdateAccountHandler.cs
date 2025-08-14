@@ -1,20 +1,19 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.UpdateAccount;
 
 public class UpdateAccountHandler(
-    IMapper mapper, StubDbContext db,
+    IMapper mapper, IAccountRepository repo,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator) : IRequestHandler<UpdateAccountCommand, MbResult<Unit>>
 {
-    public Task<MbResult<Unit>> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
+    public async Task<MbResult<Unit>> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
-            .Find(a => a.Id == request.AccountId && a.ClosedAt is null);
+        var account = await repo.GetByIdAsync(request.AccountId);
 
         if (account is null)
             throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
@@ -22,17 +21,20 @@ public class UpdateAccountHandler(
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new ArgumentException("Client with this ID not found");
 
-        if (!currencyValidator.IsExists(request.Currency))
+        if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
         request.OpenedAt ??= account.OpenedAt;
 
-        db.Accounts.Remove(account); // Change to Update operation
+        var newAccount = mapper.Map<Account>(request);
 
-        account = mapper.Map<Account>(request);
-        
-        db.Accounts.Add(account); // Change to Update operation
+        newAccount.Id = account.Id;
+        newAccount.Version = account.Version;
 
-        return Task.FromResult(new MbResult<Unit>(Unit.Value));
+        var updated = await repo.UpdateAsync(newAccount);
+        if (updated == 0)
+            throw new DBConcurrencyException("Account was modified by another process");
+
+        return new MbResult<Unit>(Unit.Value);
     }
 }

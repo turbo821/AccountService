@@ -1,23 +1,47 @@
-﻿using AccountService.Application.Behaviors;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Behaviors;
 using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Persistence;
 using AccountService.Infrastructure.Services;
+using FluentMigrator.Runner;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Data;
 using System.Reflection;
-using AccountService.Application.Abstractions;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Npgsql;
 
 namespace AccountService.Extensions;
 
 public  static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddDatabase(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+        services.AddScoped<IDbConnection>(_
+            => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddFluentMigratorCore()
+            .ConfigureRunner(rb => rb
+                .AddPostgres()
+                .WithGlobalConnectionString(configuration.GetConnectionString("DefaultConnection"))
+                .ScanIn(Assembly.GetAssembly(typeof(Account))).For.Migrations())
+            .AddLogging(lb => lb.AddFluentMigratorConsole());
+
+        return services;
+    }
+
     public static IServiceCollection AddServices(
         this IServiceCollection services)
     {
-        services.AddSingleton<StubDbContext>();
+        services.AddScoped<IAccountRepository, AccountDapperRepository>();
 
         services.AddMediatR(cfg =>
         {
@@ -33,14 +57,30 @@ public  static class ServiceCollectionExtensions
             => cfg.AddProfile<MappingProfile>());
 
         services.AddScoped<IOwnerVerificator, OwnerVerificatorStub>();
-        services.AddScoped<ICurrencyValidator, CurrencyValidatorStub>();
+        services.AddScoped<ICurrencyValidator, CurrencyValidator>();
 
         services.AddHttpClient();
         services.AddScoped<IAuthService, AuthService>();
 
+        services.AddScoped<IInterestAccrualService, InterestAccrualService>();
+
         return services;
     }
 
+    public static IServiceCollection AddHangfireWithPostgres(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddHangfire(config =>
+            config.UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(opt =>
+                    opt.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))
+                    ));
+
+        services.AddHangfireServer();
+        return services;
+    }
     public static IServiceCollection AddAuth(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -60,6 +100,7 @@ public  static class ServiceCollectionExtensions
                 };
             });
 
+        // services.AddHangfire()
         return services;
     }
 
@@ -94,7 +135,7 @@ public  static class ServiceCollectionExtensions
 
             options.AddSecurityDefinition("Keycloak JWT", new OpenApiSecurityScheme
             {
-                Description = "2 Способ: Введите токен (accessToken), полученный в методе /auth/token",
+                Description = "2 Способ: Введите accessToken, полученный в методе /auth/token",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,

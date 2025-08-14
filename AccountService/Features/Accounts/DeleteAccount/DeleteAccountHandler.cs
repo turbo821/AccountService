@@ -1,26 +1,20 @@
 ﻿using AccountService.Application.Models;
-using AccountService.Infrastructure.Persistence;
-using AutoMapper;
+using AccountService.Features.Accounts.Abstractions;
 using MediatR;
 
 namespace AccountService.Features.Accounts.DeleteAccount;
 
-public class DeleteAccountHandler(StubDbContext db, IMapper mapper) : IRequestHandler<DeleteAccountCommand, MbResult<AccountIdDto>>
+public class DeleteAccountHandler(IAccountRepository repo) : IRequestHandler<DeleteAccountCommand, MbResult<AccountIdDto>>
 {
-    public  Task<MbResult<AccountIdDto>> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
+    public  async Task<MbResult<AccountIdDto>> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts
-            .Find(x => x.Id == request.AccountId);
+        var accountId = await repo.SoftDeleteAsync(request.AccountId);
 
-        if (account is null)
-            throw new KeyNotFoundException($"Account {request.AccountId} not found");
+        if (accountId is null)
+            throw new KeyNotFoundException($"Account {request.AccountId} not found.");
 
-        if (account.ClosedAt != null)
-            throw new InvalidOperationException("Account is already closed.");
+        var accountIdDto = new AccountIdDto { AccountId = accountId.Value };
 
-        account.ClosedAt = DateTime.UtcNow;
-
-        var accountIdDto = mapper.Map<AccountIdDto>(account);
-        return Task.FromResult(new MbResult<AccountIdDto>(accountIdDto));
+        return new MbResult<AccountIdDto>(accountIdDto);
     }
 }

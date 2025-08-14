@@ -1,26 +1,23 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
 using MediatR;
 
 namespace AccountService.Features.Accounts.CheckOwnerAccounts;
 
-public class CheckOwnerAccountsHandler(StubDbContext db,
+public class CheckOwnerAccountsHandler(IAccountRepository repo,
     IOwnerVerificator ownerVerificator)
     : IRequestHandler<CheckOwnerAccountsQuery, MbResult<CheckOwnerAccountsDto>>
 {
-    public Task<MbResult<CheckOwnerAccountsDto>> Handle(CheckOwnerAccountsQuery request, CancellationToken cancellationToken)
+    public async Task<MbResult<CheckOwnerAccountsDto>> Handle(CheckOwnerAccountsQuery request, CancellationToken cancellationToken)
     {
         if (!ownerVerificator.IsExists(request.OwnerId))
             throw new KeyNotFoundException("Client with this ID not found");
 
-        var accounts = db.Accounts
-            .Where(a => a.OwnerId == request.OwnerId && a.ClosedAt is null)
-            .Select(a => a.Id).ToList();
+        var accountCount = await repo.GetCountByOwnerIdAsync(request.OwnerId);
 
         CheckOwnerAccountsDto dto;
 
-        if (accounts.Count == 0)
+        if (accountCount == 0)
         {
             dto = new CheckOwnerAccountsDto
             {
@@ -34,10 +31,10 @@ public class CheckOwnerAccountsHandler(StubDbContext db,
             {
                 OwnerId = request.OwnerId,
                 AccountExists = true,
-                AccountCount = accounts.Count
+                AccountCount = accountCount
             };
         }
 
-        return Task.FromResult(new MbResult<CheckOwnerAccountsDto>(dto));
+        return new MbResult<CheckOwnerAccountsDto>(dto);
     }
 }

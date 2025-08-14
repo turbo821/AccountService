@@ -1,33 +1,48 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
 using AutoMapper;
 using MediatR;
+using System.Data;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
-public class RegisterTransactionHandler(StubDbContext db, IMapper mapper,
+public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, MbResult<TransactionIdDto>>
 {
-    public Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
     {
-        var account = db.Accounts.Find(a => a.Id == request.AccountId && a.ClosedAt is null);
-
-        if (account == null)
-            throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
-
-        if (!currencyValidator.IsExists(request.Currency))
+        if (!await currencyValidator.IsExists(request.Currency))
             throw new ArgumentException("Unsupported currency");
 
-        if (!account.Currency.Equals(request.Currency.ToUpperInvariant()))
-            throw new ArgumentException("Transaction currency is different from account currency");
+        Transaction transaction;
 
-        var transaction = mapper.Map<Transaction>(request);
+        using var dbTransaction = await repo.BeginTransaction();
+        try
+        {
+            var account = await repo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
 
-        account.ConductTransaction(transaction);
-        db.Transactions.Add(transaction);
+            if (account == null)
+                throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
+
+            transaction = mapper.Map<Transaction>(request);
+
+            account.ConductTransaction(transaction);
+
+            var updated = await repo.UpdateBalanceAsync(account, dbTransaction);
+            if (updated == 0)
+                throw new DBConcurrencyException("Account was modified by another transaction");
+
+            await repo.AddTransactionAsync(transaction, dbTransaction);
+
+            dbTransaction.Commit();
+        }
+        catch
+        {
+            dbTransaction.Rollback();
+            throw;
+        }
 
         var transactionIdDto = mapper.Map<TransactionIdDto>(transaction);
-        return Task.FromResult(new MbResult<TransactionIdDto>(transactionIdDto));
+        return new MbResult<TransactionIdDto>(transactionIdDto);
     }
 }

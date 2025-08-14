@@ -10,7 +10,7 @@ namespace AccountService.Controllers;
 public class AuthController(IAuthService authService) : ControllerBase
 {
     /// <summary>
-    /// Получение токена доступа (используются данные тестового пользователя)
+    /// Получение token доступа (используются данные тестового пользователя)
     /// </summary>
     /// <remarks>
     /// Используемые данные:
@@ -21,10 +21,10 @@ public class AuthController(IAuthService authService) : ControllerBase
     /// </ul>
     /// </remarks>
     /// <returns>Данные с AccessToken</returns>
-    /// <response code="200">Токен доступа получен</response>
+    /// <response code="200">Token доступа получен</response>
     /// <response code="401">Сервер аутентификации недоступен или данные неверны</response>
     [HttpGet("token")]
-    [ProducesResponseType(typeof(MbResult<Unit>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MbResult<AccessTokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(MbResult<Unit>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetToken()
     {

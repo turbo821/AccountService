@@ -1,6 +1,6 @@
+using AccountService.Extensions;
 using AccountService.Middlewares;
 using System.Text.Json.Serialization;
-using AccountService.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +15,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddHangfireWithPostgres(builder.Configuration);
 builder.Services.AddServices();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddSwaggerGenWithAuth(builder.Configuration);
@@ -26,6 +28,10 @@ builder.Services.AddControllers()
     });
 
 var app = builder.Build();
+
+app.RunMigrations();
+
+app.UseHangfire();
 
 app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
@@ -46,3 +52,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;

@@ -9,6 +9,7 @@ services:
       - 80:8080
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=account_db;Username=postgres;Password=postgres;
       - Keycloak__ClientId=account-api
       - Keycloak__AuthorizationUrl=http://localhost:8080/realms/auth-service/protocol/openid-connect/auth
       - Keycloak__TokenUrl=http://keycloak:8080/realms/auth-service/protocol/openid-connect/token
@@ -17,6 +18,7 @@ services:
       - TestUser__Username=tom
       - TestUser__Password=pass123
     depends_on:
+      - postgres
       - keycloak
 
   keycloak:
@@ -28,8 +30,7 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
-      - ./.containers:/opt/keykcloak/data       
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json  
     ports:
       - 8080:8080
     healthcheck:
@@ -37,3 +38,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres:
+    image: postgres:17
+    container_name: Postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: account_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d account_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
