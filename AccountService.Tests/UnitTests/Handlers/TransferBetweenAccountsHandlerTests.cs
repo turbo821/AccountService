@@ -65,7 +65,7 @@ public class TransferBetweenAccountsHandlerTests
         );
 
         _currencyValidatorMock.Setup(v => v.IsExists(currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(fromAccountId, mockDbTransaction.Object))
             .ReturnsAsync(fromAccount);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(toAccountId, mockDbTransaction.Object))
@@ -90,7 +90,7 @@ public class TransferBetweenAccountsHandlerTests
         Assert.Equal(150m, fromAccount.Balance);
         Assert.Equal(150m, toAccount.Balance);
 
-        _repoMock.Verify(r => r.BeginTransaction(), Times.Once);
+        _repoMock.Verify(r => r.BeginTransactionAsync(), Times.Once);
         _repoMock.Verify(r => r.GetByIdForUpdateAsync(fromAccountId, mockDbTransaction.Object), Times.Once);
         _repoMock.Verify(r => r.GetByIdForUpdateAsync(toAccountId, mockDbTransaction.Object), Times.Once);
         _repoMock.Verify(r => r.AddTransactionAsync(It.IsAny<Transaction>(), mockDbTransaction.Object), Times.Exactly(2));
@@ -117,7 +117,7 @@ public class TransferBetweenAccountsHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(command, CancellationToken.None));
-        _repoMock.Verify(r => r.BeginTransaction(), Times.Never);
+        _repoMock.Verify(r => r.BeginTransactionAsync(), Times.Never);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class TransferBetweenAccountsHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.FromAccountId, mockDbTransaction.Object)).ReturnsAsync((Account?)null);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.ToAccountId, mockDbTransaction.Object)).ReturnsAsync(new Account
         {
@@ -170,7 +170,7 @@ public class TransferBetweenAccountsHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.FromAccountId, mockDbTransaction.Object)).ReturnsAsync(new Account
         {
             Id = command.FromAccountId,
@@ -203,7 +203,7 @@ public class TransferBetweenAccountsHandlerTests
         mockDbTransaction.Setup(t => t.Rollback());
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
 
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.FromAccountId, mockDbTransaction.Object)).ReturnsAsync(new Account
         {
@@ -264,7 +264,7 @@ public class TransferBetweenAccountsHandlerTests
         );
 
         _currencyValidatorMock.Setup(v => v.IsExists(currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(fromAccountId, mockDbTransaction.Object)).ReturnsAsync(fromAccount);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(toAccountId, mockDbTransaction.Object)).ReturnsAsync(toAccount);
         _repoMock.Setup(r => r.AddTransactionAsync(It.IsAny<Transaction>(), mockDbTransaction.Object)).Returns(Task.CompletedTask);
@@ -317,7 +317,7 @@ public class TransferBetweenAccountsHandlerTests
         );
 
         _currencyValidatorMock.Setup(v => v.IsExists(currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransaction()).ReturnsAsync(mockDbTransaction.Object);
+        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(fromAccountId, mockDbTransaction.Object)).ReturnsAsync(fromAccount);
         _repoMock.Setup(r => r.GetByIdForUpdateAsync(toAccountId, mockDbTransaction.Object)).ReturnsAsync(toAccount);
         _repoMock.Setup(r => r.AddTransactionAsync(It.IsAny<Transaction>(), mockDbTransaction.Object)).Returns(Task.CompletedTask);

@@ -1,5 +1,7 @@
-﻿using AccountService.Application.Models;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
+using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 using MediatR;
 
@@ -21,7 +23,16 @@ public class CreateAccountHandler(
 
         var account = mapper.Map<Account>(request);
 
-        await repo.AddAsync(account);
+        var accountOpenedEvent = new AccountOpened(
+            Guid.NewGuid(),
+            DateTime.UtcNow,
+            account.Id,
+            account.OwnerId,
+            account.Currency,
+            account.Type.ToString()
+        );
+
+        await repo.AddAsync(account, accountOpenedEvent);
 
         var accountIdDto = mapper.Map<AccountIdDto>(account);
         return new MbResult<AccountIdDto>(accountIdDto);

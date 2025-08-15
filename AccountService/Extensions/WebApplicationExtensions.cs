@@ -1,4 +1,5 @@
 ﻿using AccountService.Features.Accounts.Abstractions;
+using AccountService.Infrastructure.Persistence.Background;
 using FluentMigrator.Runner;
 using Hangfire;
 using Hangfire.Dashboard;
@@ -37,7 +38,11 @@ public static class WebApplicationExtensions
             s => s.AccrueDailyInterestAsync(),
             Cron.Daily
         );
-
+        RecurringJob.AddOrUpdate<OutboxProcessor>(
+            "outbox-processor",
+            processor => processor.ProcessOutboxMessages(),
+            Cron.Minutely);
+            
         return app;
     }
 }

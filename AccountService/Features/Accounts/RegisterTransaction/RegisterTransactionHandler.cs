@@ -16,7 +16,7 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 
         Transaction transaction;
 
-        using var dbTransaction = await repo.BeginTransaction();
+        using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
             var account = await repo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);

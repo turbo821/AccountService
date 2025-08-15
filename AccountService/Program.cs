@@ -15,11 +15,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddHangfireWithPostgres(builder.Configuration);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+
+builder.Services.AddDatabase(connectionString);
+builder.Services.AddHangfireWithPostgres(connectionString);
 builder.Services.AddServices();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddSwaggerGenWithAuth(builder.Configuration);
+builder.Services.AddRabbitMq(builder.Configuration);
 
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>

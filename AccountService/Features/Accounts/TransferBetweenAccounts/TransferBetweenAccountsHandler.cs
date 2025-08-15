@@ -18,7 +18,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
         Transaction creditTransaction;
         Transaction debitTransaction;
 
-        using var dbTransaction = await repo.BeginTransaction();
+        using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
             var fromAccount = await repo.GetByIdForUpdateAsync(request.FromAccountId, dbTransaction);

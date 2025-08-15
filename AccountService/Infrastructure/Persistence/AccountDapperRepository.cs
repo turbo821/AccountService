@@ -3,6 +3,8 @@ using AccountService.Features.Accounts.Abstractions;
 using Dapper;
 using Npgsql;
 using System.Data;
+using Newtonsoft.Json;
+using AccountService.Application.Models;
 
 namespace AccountService.Infrastructure.Persistence;
 
@@ -94,26 +96,52 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
 
     }
 
-    public async Task AddAsync(Account account)
+    public async Task AddAsync(Account account, DomainEvent @event)
     {
-        const string sql = 
-            """
-               INSERT INTO accounts 
-                   (id, owner_id, type, currency, balance, interest_rate, opened_at)
-               VALUES 
-                   (@Id, @OwnerId, @Type, @Currency, @Balance, @InterestRate, @OpenedAt)
-            """;
+        using var transaction = await BeginTransactionAsync();
 
-        await connection.ExecuteAsync(sql, new
+        try
         {
-            account.Id,
-            account.OwnerId,
-            Type = (int)account.Type,
-            account.Currency,
-            account.Balance,
-            account.InterestRate,
-            account.OpenedAt
-        });
+            const string insertAccountSql = 
+                """
+                    INSERT INTO accounts 
+                        (id, owner_id, type, currency, balance, interest_rate, opened_at)
+                    VALUES 
+                        (@Id, @OwnerId, @Type, @Currency, @Balance, @InterestRate, @OpenedAt)
+                """;
+
+            await connection.ExecuteAsync(insertAccountSql, new
+            {
+                account.Id,
+                account.OwnerId,
+                Type = (int)account.Type,
+                account.Currency,
+                account.Balance,
+                account.InterestRate,
+                account.OpenedAt
+            }, transaction);
+
+            const string insertOutboxSql = 
+                """
+                   INSERT INTO outbox_messages (id, type, payload, occurred_at)
+                   VALUES (@Id, @Type, @Payload::jsonb, @OccurredAt)
+                """;
+
+            await connection.ExecuteAsync(insertOutboxSql, new
+            {
+                Id = @event.EventId,
+                Type = @event.GetType().Name,
+                Payload = JsonConvert.SerializeObject(@event),
+                @event.OccurredAt
+            }, transaction);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
     }
 
     public async Task<int> UpdateAsync(Account account)
@@ -231,7 +259,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         );
     }
 
-    public async Task<IDbTransaction> BeginTransaction()
+    public async Task<IDbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
         if (connection is not NpgsqlConnection conn)
             throw new InvalidOperationException("Connection must be NpgsqlConnection");
@@ -239,6 +267,6 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
 
-        return await conn.BeginTransactionAsync(IsolationLevel.Serializable);
+        return await conn.BeginTransactionAsync(isolationLevel);
     }
 }

@@ -14,6 +14,8 @@ using System.Reflection;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Npgsql;
+using RabbitMQ.Client;
+using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
 
 namespace AccountService.Extensions;
 
@@ -21,17 +23,17 @@ public  static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDatabase(
         this IServiceCollection services,
-        IConfiguration configuration)
+        string connectionString)
     {
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         services.AddScoped<IDbConnection>(_
-            => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
+            => new NpgsqlConnection(connectionString));
 
         services.AddFluentMigratorCore()
             .ConfigureRunner(rb => rb
                 .AddPostgres()
-                .WithGlobalConnectionString(configuration.GetConnectionString("DefaultConnection"))
+                .WithGlobalConnectionString(connectionString)
                 .ScanIn(Assembly.GetAssembly(typeof(Account))).For.Migrations())
             .AddLogging(lb => lb.AddFluentMigratorConsole());
 
@@ -69,18 +71,19 @@ public  static class ServiceCollectionExtensions
 
     public static IServiceCollection AddHangfireWithPostgres(
         this IServiceCollection services,
-        IConfiguration configuration)
+        string connectionString)
     {
         services.AddHangfire(config =>
             config.UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
                 .UsePostgreSqlStorage(opt =>
-                    opt.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))
+                    opt.UseNpgsqlConnection(connectionString)
                     ));
 
         services.AddHangfireServer();
         return services;
     }
+
     public static IServiceCollection AddAuth(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -100,7 +103,6 @@ public  static class ServiceCollectionExtensions
                 };
             });
 
-        // services.AddHangfire()
         return services;
     }
 
@@ -177,6 +179,26 @@ public  static class ServiceCollectionExtensions
         
             options.AddSecurityRequirement(securityRequirement);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddRabbitMq(this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddSingleton<IConnectionFactory>(_ =>
+            new ConnectionFactory
+            {
+                HostName = configuration["RabbitMQ:Host"]!,
+                UserName = configuration["RabbitMQ:Username"]!,
+                Password = configuration["RabbitMQ:Password"]!,
+                DispatchConsumersAsync = true
+            });
+
+        services.AddSingleton<IConnection>(sp =>
+            sp.GetRequiredService<IConnectionFactory>().CreateConnection());
+
+        services.AddScoped<IRabbitMqService, RabbitMqService>();
 
         return services;
     }
