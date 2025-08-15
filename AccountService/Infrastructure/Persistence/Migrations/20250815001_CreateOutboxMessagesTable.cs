@@ -12,6 +12,8 @@ public class CreateOutboxMessagesTable : Migration
             .WithColumn("id").AsGuid().PrimaryKey()
             .WithColumn("type").AsString(200).NotNullable()
             .WithColumn("payload").AsCustom("JSONB").NotNullable()
+            .WithColumn("exchange").AsString(200).NotNullable()
+            .WithColumn("routing_key").AsString(200).NotNullable()
             .WithColumn("occurred_at").AsDateTime().NotNullable()
             .WithColumn("processed_at").AsDateTime().Nullable();
     }

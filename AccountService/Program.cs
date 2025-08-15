@@ -15,10 +15,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
-
-builder.Services.AddDatabase(connectionString);
-builder.Services.AddHangfireWithPostgres(connectionString);
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddHangfireWithPostgres(builder.Configuration);
 builder.Services.AddServices();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddSwaggerGenWithAuth(builder.Configuration);

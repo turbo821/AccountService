@@ -18,7 +18,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
         Transaction creditTransaction;
         Transaction debitTransaction;
 
-        using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
+        await using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
             var fromAccount = await repo.GetByIdForUpdateAsync(request.FromAccountId, dbTransaction);
@@ -75,11 +75,11 @@ public class TransferBetweenAccountsHandler(IAccountRepository repo, IMapper map
                 throw new InvalidOperationException("Final balances mismatch — rolling back");
             }
 
-            dbTransaction.Commit();
+            await dbTransaction.CommitAsync(cancellationToken);
         }
         catch
         {
-            dbTransaction.Rollback();
+            await dbTransaction.RollbackAsync(cancellationToken);
             throw;
         }
 

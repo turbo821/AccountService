@@ -1,5 +1,4 @@
-﻿using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence.Background;
+﻿using AccountService.Background;
 using FluentMigrator.Runner;
 using Hangfire;
 using Hangfire.Dashboard;
@@ -10,17 +9,40 @@ public static class WebApplicationExtensions
 {
     public static WebApplication RunMigrations(this WebApplication app)
     {
+        var isDatabaseReady = false;
+        var retries = 0;
+        const int maxRetries = 10;
+        const int delayMs = 2000;
+
         using var scope = app.Services.CreateScope();
         var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
 
-        if (runner.HasMigrationsToApplyUp())
+        while (!isDatabaseReady && retries < maxRetries)
         {
-            Console.WriteLine("Applying pending migrations...");
-            runner.MigrateUp();
+            try
+            {
+                if (runner.HasMigrationsToApplyUp())
+                {
+                    Console.WriteLine("Applying pending migrations...");
+                    runner.MigrateUp();
+                }
+                else
+                {
+                    Console.WriteLine("No pending migrations.");
+                }
+                isDatabaseReady = true;
+            }
+            catch (Exception ex)
+            {
+                retries++;
+                Console.WriteLine($"Database not ready yet (attempt {retries}/{maxRetries}). Waiting {delayMs}ms... Error: {ex.Message}");
+                Thread.Sleep(delayMs);
+            }
         }
-        else
+
+        if (!isDatabaseReady)
         {
-            Console.WriteLine("No pending migrations.");
+            throw new Exception("Failed to connect to database after multiple attempts");
         }
 
         return app;
@@ -33,7 +55,7 @@ public static class WebApplicationExtensions
             Authorization = [new HangfireAuthorizationFilter()]
         });
 
-        RecurringJob.AddOrUpdate<IInterestAccrualService>(
+        RecurringJob.AddOrUpdate<InterestAccrualHandler>(
             "accrue-interest-daily",
             s => s.AccrueDailyInterestAsync(),
             Cron.Daily

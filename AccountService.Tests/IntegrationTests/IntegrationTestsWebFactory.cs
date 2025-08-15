@@ -1,9 +1,8 @@
-﻿using AccountService.Features.Accounts;
-using DotNet.Testcontainers.Builders;
-using FluentMigrator.Runner;
+﻿using DotNet.Testcontainers.Builders;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,6 +11,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using AccountService.Extensions;
 using Testcontainers.PostgreSql;
 
 namespace AccountService.Tests.IntegrationTests;
@@ -25,7 +25,6 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
         .WithPassword("postgres")
         .WithImage("postgres:17")
         .WithWaitStrategy(Wait.ForUnixContainer()
-            .UntilPortIsAvailable(5432)
             .UntilCommandIsCompleted("pg_isready -U postgres"))
         .Build();
 
@@ -34,49 +33,55 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
         await _postgresContainer.StartAsync();
 
         await WaitForPostgresReady(_postgresContainer.GetConnectionString());
-
-        ApplyMigrations();
-    }
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.ConfigureServices(services =>
-        {
-            var descriptors = services.Where(d => d.ServiceType == typeof(IDbConnection)).ToList();
-            foreach (var descriptor in descriptors)
-                services.Remove(descriptor);
-
-            services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(_postgresContainer.GetConnectionString()));
-
-            services.AddAuthentication("TestScheme")
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
-
-            services.AddAuthorization();
-        });
-    }
-
-    private void ApplyMigrations()
-    {
-        // Настройка FluentMigrator runner
-        var serviceProvider = new ServiceCollection()
-            .AddFluentMigratorCore()
-            .ConfigureRunner(rb => rb
-                .AddPostgres()
-                .WithGlobalConnectionString(_postgresContainer.GetConnectionString())
-                .ScanIn(typeof(Account).Assembly).For.Migrations()
-            )
-            .AddLogging(lb => lb.AddFluentMigratorConsole())
-            .BuildServiceProvider(false);
-
-        using var scope = serviceProvider.CreateScope();
-        var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
-
-        runner.MigrateUp();
     }
 
     public new async Task DisposeAsync()
     {
         await _postgresContainer.DisposeAsync();
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        var testConnectionString = _postgresContainer.GetConnectionString();
+
+        builder.ConfigureServices(services =>
+        {
+            var descriptorDbConnection = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IDbConnection));
+            if (descriptorDbConnection != null)
+                services.Remove(descriptorDbConnection);
+
+            var fmServices = services
+                .Where(d =>
+                    d.ServiceType.FullName != null && d.ServiceType.FullName.Contains("FluentMigrator")).ToList();
+
+            if (fmServices.Count != 0)
+            {
+                foreach (var runner in fmServices)
+                    services.Remove(runner);
+            }
+
+            var hangfireServices = services
+                .Where(d => d.ServiceType.Namespace != null && 
+                            d.ServiceType.Namespace.StartsWith("Hangfire")).ToList();
+
+            foreach (var descriptor in hangfireServices)
+                services.Remove(descriptor);
+
+            var newConfig = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:DefaultConnection"] = testConnectionString
+                })
+                .Build();
+
+            services.AddDatabase(newConfig);
+            services.AddHangfireWithPostgres(newConfig);
+            services.AddAuthentication("TestScheme")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
+
+            services.AddAuthorization();
+        });
     }
 
     private static async Task WaitForPostgresReady(string connectionString)

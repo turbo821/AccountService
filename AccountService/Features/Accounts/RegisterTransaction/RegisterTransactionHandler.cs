@@ -16,7 +16,7 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 
         Transaction transaction;
 
-        using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
+        await using var dbTransaction = await repo.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
             var account = await repo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
@@ -34,11 +34,11 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 
             await repo.AddTransactionAsync(transaction, dbTransaction);
 
-            dbTransaction.Commit();
+            await dbTransaction.CommitAsync(cancellationToken);
         }
         catch
         {
-            dbTransaction.Rollback();
+            await dbTransaction.RollbackAsync(cancellationToken);
             throw;
         }
 

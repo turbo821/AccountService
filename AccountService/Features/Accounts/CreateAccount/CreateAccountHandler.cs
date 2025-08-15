@@ -8,7 +8,7 @@ using MediatR;
 namespace AccountService.Features.Accounts.CreateAccount;
 
 public class CreateAccountHandler(
-    IMapper mapper, IAccountRepository repo,
+    IMapper mapper, IAccountRepository accRepo, IOutboxRepository outboxRepo,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator)
     : IRequestHandler<CreateAccountCommand, MbResult<AccountIdDto>>
@@ -32,7 +32,18 @@ public class CreateAccountHandler(
             account.Type.ToString()
         );
 
-        await repo.AddAsync(account, accountOpenedEvent);
+        await using var transaction = await accRepo.BeginTransactionAsync();
+        try
+        {
+            await accRepo.AddAsync(account);
+            await outboxRepo.AddAsync(accountOpenedEvent, "account.events", "account.opened");
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch 
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
 
         var accountIdDto = mapper.Map<AccountIdDto>(account);
         return new MbResult<AccountIdDto>(accountIdDto);

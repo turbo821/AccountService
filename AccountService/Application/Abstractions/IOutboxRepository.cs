@@ -1,0 +1,12 @@
+﻿using System.Data;
+using AccountService.Application.Models;
+
+namespace AccountService.Application.Abstractions;
+
+public interface IOutboxRepository
+{
+    Task AddAsync(DomainEvent @event, string exchange, string routingKey, IDbTransaction? transaction = null);
+    Task<List<OutboxMessage>> GetMessagesAsync(int limit = 100);
+    Task MarkProcessedAsync(Guid id);
+
+}

@@ -1,11 +1,10 @@
 ﻿using AccountService.Features.Accounts.Abstractions;
 using Npgsql;
 
-namespace AccountService.Infrastructure.Services;
+namespace AccountService.Background;
 
-public class InterestAccrualService(IConfiguration config, 
-    IAccountRepository repo, ILogger<InterestAccrualService> logger)
-    : IInterestAccrualService
+public class InterestAccrualHandler(IConfiguration config, 
+    IAccountRepository repo, ILogger<InterestAccrualHandler> logger)
 {
     private readonly string _connectionString = config.GetConnectionString("DefaultConnection")!;
 

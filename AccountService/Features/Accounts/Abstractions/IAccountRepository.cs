@@ -1,5 +1,5 @@
-﻿using AccountService.Application.Models;
-using System.Data;
+﻿using System.Data;
+using System.Data.Common;
 
 namespace AccountService.Features.Accounts.Abstractions;
 
@@ -10,7 +10,7 @@ public interface IAccountRepository
     Task<Account?> GetByIdForUpdateAsync(Guid accountId, IDbTransaction transaction);
     Task<Account?> GetByIdWithTransactionsForPeriodAsync(Guid accountId, DateTime? from, DateTime? to);
     Task<int> GetCountByOwnerIdAsync(Guid ownerId);
-    Task AddAsync(Account account, DomainEvent @event);
+    Task AddAsync(Account account, IDbTransaction? transaction = null);
     Task<int> UpdateAsync(Account account);
     Task<int> UpdateBalanceAsync(Account account, IDbTransaction? transaction = null);
     Task<int> UpdateInterestRateAsync(Account account);
@@ -18,5 +18,5 @@ public interface IAccountRepository
 
     Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
     Task AccrueInterestForAllAsync(IDbTransaction? transaction = null);
-    Task<IDbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
+    Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
 }

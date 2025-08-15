@@ -3,8 +3,7 @@ using AccountService.Features.Accounts.Abstractions;
 using Dapper;
 using Npgsql;
 using System.Data;
-using Newtonsoft.Json;
-using AccountService.Application.Models;
+using System.Data.Common;
 
 namespace AccountService.Infrastructure.Persistence;
 
@@ -96,12 +95,8 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
 
     }
 
-    public async Task AddAsync(Account account, DomainEvent @event)
+    public async Task AddAsync(Account account, IDbTransaction? transaction = null)
     {
-        using var transaction = await BeginTransactionAsync();
-
-        try
-        {
             const string insertAccountSql = 
                 """
                     INSERT INTO accounts 
@@ -120,28 +115,6 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                 account.InterestRate,
                 account.OpenedAt
             }, transaction);
-
-            const string insertOutboxSql = 
-                """
-                   INSERT INTO outbox_messages (id, type, payload, occurred_at)
-                   VALUES (@Id, @Type, @Payload::jsonb, @OccurredAt)
-                """;
-
-            await connection.ExecuteAsync(insertOutboxSql, new
-            {
-                Id = @event.EventId,
-                Type = @event.GetType().Name,
-                Payload = JsonConvert.SerializeObject(@event),
-                @event.OccurredAt
-            }, transaction);
-
-            transaction.Commit();
-        }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
     }
 
     public async Task<int> UpdateAsync(Account account)
@@ -259,7 +232,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         );
     }
 
-    public async Task<IDbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
+    public async Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
         if (connection is not NpgsqlConnection conn)
             throw new InvalidOperationException("Connection must be NpgsqlConnection");

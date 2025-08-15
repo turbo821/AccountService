@@ -2,9 +2,10 @@
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AutoMapper;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Data;
-using Microsoft.Extensions.Logging;
+using System.Data.Common;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
@@ -13,6 +14,7 @@ public class RegisterTransactionHandlerTests
     private readonly IMapper _mapper;
     private readonly Mock<IAccountRepository> _repoMock = new();
     private readonly Mock<ICurrencyValidator> _currencyValidatorMock = new();
+    private readonly Mock<DbTransaction> _mockDbTransaction = new();
 
     public RegisterTransactionHandlerTests()
     {
@@ -47,17 +49,16 @@ public class RegisterTransactionHandlerTests
             Transactions = []
         };
 
-        var mockDbTransaction = new Mock<IDbTransaction>();
-        mockDbTransaction.Setup(t => t.Commit());
-        mockDbTransaction.Setup(t => t.Rollback());
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
-        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Serializable)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, _mockDbTransaction.Object))
             .ReturnsAsync(account);
-        _repoMock.Setup(r => r.UpdateBalanceAsync(account, mockDbTransaction.Object))
+        _repoMock.Setup(r => r.UpdateBalanceAsync(account, _mockDbTransaction.Object))
             .ReturnsAsync(1);
-        _repoMock.Setup(r => r.AddTransactionAsync(It.IsAny<Transaction>(), mockDbTransaction.Object))
+        _repoMock.Setup(r => r.AddTransactionAsync(It.IsAny<Transaction>(), _mockDbTransaction.Object))
             .Returns(Task.CompletedTask);
 
         var handler = CreateHandler();
@@ -70,17 +71,17 @@ public class RegisterTransactionHandlerTests
         Assert.NotNull(result.Data);
         Assert.NotEqual(Guid.Empty, result.Data.TransactionId);
 
-        _repoMock.Verify(r => r.BeginTransactionAsync(), Times.Once);
-        _repoMock.Verify(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object), Times.Once);
-        _repoMock.Verify(r => r.UpdateBalanceAsync(account, mockDbTransaction.Object), Times.Once);
+        _repoMock.Verify(r => r.BeginTransactionAsync(IsolationLevel.Serializable), Times.Once);
+        _repoMock.Verify(r => r.GetByIdForUpdateAsync(command.AccountId, _mockDbTransaction.Object), Times.Once);
+        _repoMock.Verify(r => r.UpdateBalanceAsync(account, _mockDbTransaction.Object), Times.Once);
         _repoMock.Verify(r => r.AddTransactionAsync(It.Is<Transaction>(t =>
             t.AccountId == command.AccountId &&
             t.Amount == command.Amount &&
             t.Currency == command.Currency &&
             t.Type == command.Type &&
-            t.Description == command.Description), mockDbTransaction.Object), Times.Once);
-        mockDbTransaction.Verify(t => t.Commit(), Times.Once);
-        mockDbTransaction.Verify(t => t.Rollback(), Times.Never);
+            t.Description == command.Description), _mockDbTransaction.Object), Times.Once);
+        _mockDbTransaction.Verify(t => t.CommitAsync(CancellationToken.None), Times.Once);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Never);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class RegisterTransactionHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(command, CancellationToken.None));
 
-        _repoMock.Verify(r => r.BeginTransactionAsync(), Times.Never);
+        _repoMock.Verify(r => r.BeginTransactionAsync(IsolationLevel.Serializable), Times.Never);
     }
 
     [Fact]
@@ -117,13 +118,12 @@ public class RegisterTransactionHandlerTests
             Description: "Test"
         );
 
-        var mockDbTransaction = new Mock<IDbTransaction>();
-        mockDbTransaction.Setup(t => t.Commit());
-        mockDbTransaction.Setup(t => t.Rollback());
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
-        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Serializable)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, _mockDbTransaction.Object))
             .ReturnsAsync((Account?)null);
 
         var handler = CreateHandler();
@@ -131,7 +131,7 @@ public class RegisterTransactionHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<KeyNotFoundException>(() => handler.Handle(command, CancellationToken.None));
 
-        mockDbTransaction.Verify(t => t.Rollback(), Times.Once);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -154,15 +154,14 @@ public class RegisterTransactionHandlerTests
             Transactions = []
         };
 
-        var mockDbTransaction = new Mock<IDbTransaction>();
-        mockDbTransaction.Setup(t => t.Commit());
-        mockDbTransaction.Setup(t => t.Rollback());
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
 
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(mockDbTransaction.Object);
-        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, mockDbTransaction.Object))
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Serializable)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdForUpdateAsync(command.AccountId, _mockDbTransaction.Object))
             .ReturnsAsync(account);
-        _repoMock.Setup(r => r.UpdateBalanceAsync(account, mockDbTransaction.Object))
+        _repoMock.Setup(r => r.UpdateBalanceAsync(account, _mockDbTransaction.Object))
             .ReturnsAsync(0);
 
         var handler = CreateHandler();
@@ -170,7 +169,7 @@ public class RegisterTransactionHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<DBConcurrencyException>(() => handler.Handle(command, CancellationToken.None));
 
-        mockDbTransaction.Verify(t => t.Rollback(), Times.Once);
-        mockDbTransaction.Verify(t => t.Commit(), Times.Never);
+        _mockDbTransaction.Verify(t => t.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

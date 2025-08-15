@@ -1,9 +1,13 @@
-﻿using AccountService.Features.Accounts;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
+using AccountService.Features.Accounts.Contracts;
 using AccountService.Features.Accounts.CreateAccount;
 using AutoMapper;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Data;
+using System.Data.Common;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
@@ -11,8 +15,11 @@ public class CreateAccountHandlerWithMapperTests
 {
     private readonly IMapper _realMapper;
     private readonly Mock<IAccountRepository> _repoMock = new();
+    private readonly Mock<IOutboxRepository> _outboxRepoMock = new();
     private readonly Mock<ICurrencyValidator> _currencyValidatorMock = new();
     private readonly Mock<IOwnerVerificator> _ownerVerificatorMock = new();
+    private readonly Mock<DbTransaction> _transactionMock = new();
+
     public CreateAccountHandlerWithMapperTests()
     {
         var config = new MapperConfiguration(cfg =>
@@ -28,6 +35,7 @@ public class CreateAccountHandlerWithMapperTests
         return new CreateAccountHandler(
             _realMapper,
             _repoMock.Object,
+            _outboxRepoMock.Object,
             _currencyValidatorMock.Object,
             _ownerVerificatorMock.Object
         );
@@ -47,6 +55,15 @@ public class CreateAccountHandlerWithMapperTests
         _ownerVerificatorMock.Setup(v => v.IsExists(command.OwnerId)).Returns(true);
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
 
+        _repoMock.Setup(r => r.BeginTransactionAsync(It.IsAny<IsolationLevel>()))
+            .ReturnsAsync(_transactionMock.Object);
+
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Account>(), _transactionMock.Object))
+            .Returns(Task.CompletedTask);
+
+        _outboxRepoMock.Setup(r => r.AddAsync(It.IsAny<AccountOpened>(), It.IsAny<string>(), It.IsAny<string>(),
+            _transactionMock.Object)).Returns(Task.CompletedTask);
+
         var handler = CreateHandler();
 
         // Act
@@ -59,7 +76,7 @@ public class CreateAccountHandlerWithMapperTests
             a.Currency == command.Currency &&
             a.Balance == 0m &&
             a.InterestRate == command.InterestRate
-        )), Times.Once);
+        ), It.IsAny<DbTransaction>()), Times.Once);
 
         Assert.NotNull(result.Data);
         Assert.NotEqual(Guid.Empty, result.Data.AccountId);
@@ -77,12 +94,13 @@ public class CreateAccountHandlerWithMapperTests
         );
 
         _ownerVerificatorMock.Setup(v => v.IsExists(command.OwnerId)).Returns(false);
+
         var handler = CreateHandler();
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(command, CancellationToken.None));
         Assert.Equal("Client with this ID not found", ex.Message);
-        _repoMock.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Never);
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<Account>(), _transactionMock.Object), Times.Never);
     }
 
     [Fact]
@@ -103,6 +121,6 @@ public class CreateAccountHandlerWithMapperTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(command, CancellationToken.None));
-        _repoMock.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Never);
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<Account>(), _transactionMock.Object), Times.Never);
     }
 }

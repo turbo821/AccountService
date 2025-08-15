@@ -23,17 +23,17 @@ public  static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDatabase(
         this IServiceCollection services,
-        string connectionString)
+        IConfiguration configuration)
     {
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         services.AddScoped<IDbConnection>(_
-            => new NpgsqlConnection(connectionString));
+            => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddFluentMigratorCore()
             .ConfigureRunner(rb => rb
                 .AddPostgres()
-                .WithGlobalConnectionString(connectionString)
+                .WithGlobalConnectionString(configuration.GetConnectionString("DefaultConnection"))
                 .ScanIn(Assembly.GetAssembly(typeof(Account))).For.Migrations())
             .AddLogging(lb => lb.AddFluentMigratorConsole());
 
@@ -44,6 +44,7 @@ public  static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         services.AddScoped<IAccountRepository, AccountDapperRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         services.AddMediatR(cfg =>
         {
@@ -64,20 +65,18 @@ public  static class ServiceCollectionExtensions
         services.AddHttpClient();
         services.AddScoped<IAuthService, AuthService>();
 
-        services.AddScoped<IInterestAccrualService, InterestAccrualService>();
-
         return services;
     }
 
     public static IServiceCollection AddHangfireWithPostgres(
         this IServiceCollection services,
-        string connectionString)
+        IConfiguration configuration)
     {
         services.AddHangfire(config =>
             config.UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
                 .UsePostgreSqlStorage(opt =>
-                    opt.UseNpgsqlConnection(connectionString)
+                    opt.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))
                     ));
 
         services.AddHangfireServer();

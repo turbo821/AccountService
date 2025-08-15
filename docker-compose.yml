@@ -22,9 +22,12 @@ services:
       - RabbitMQ__Username=guest
       - RabbitMQ__Password=guest
     depends_on:
-      - postgres
-      - keycloak
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.2  
@@ -38,11 +41,6 @@ services:
       - ./configurations/realm-export.json:/opt/keycloak/data/import/realm.json  
     ports:
       - 8080:8080
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   postgres:
     image: postgres:17
@@ -52,9 +50,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: account_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./.containers/postgres_data:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - 5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d account_db"]
       interval: 5s
@@ -70,17 +68,13 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbitmq_management load_definitions "/opt/definitions.json"
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - ./.containers/rabbitmq_data:/var/lib/rabbitmq
       - ./configurations/definitions.json:/opt/definitions.json
     ports:
-      - 5672:5672
+      - 5672
       - 15672:15672
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
       timeout: 10s
       retries: 5
-
-volumes:
-  postgres_data:
-  rabbitmq_data:  
