@@ -7,6 +7,7 @@ using Xunit.Abstractions;
 
 namespace AccountService.Tests.IntegrationTests;
 
+[Trait("Category", "Integration")]
 public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;

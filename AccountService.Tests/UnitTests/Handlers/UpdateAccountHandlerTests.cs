@@ -10,6 +10,7 @@ using System.Data.Common;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
+[Trait("Category", "Unit")]
 public class UpdateAccountHandlerTests
 {
     private readonly IMapper _mapper;

@@ -2,6 +2,7 @@
 
 namespace AccountService.Tests.UnitTests;
 
+[Trait("Category", "Unit")]
 public class AccountTests
 {
     [Fact]

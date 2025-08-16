@@ -7,6 +7,7 @@ using Moq;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
+[Trait("Category", "Unit")]
 public class GetAccountListHandlerTests
 {
     private readonly IMapper _mapper;

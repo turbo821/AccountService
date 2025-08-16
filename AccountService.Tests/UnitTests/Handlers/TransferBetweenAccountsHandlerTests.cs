@@ -10,6 +10,7 @@ using AccountService.Application.Abstractions;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
+[Trait("Category", "Unit")]
 public class TransferBetweenAccountsHandlerTests
 {
     private readonly IMapper _mapper;

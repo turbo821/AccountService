@@ -11,6 +11,7 @@ using System.Data.Common;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
+[Trait("Category", "Unit")]
 public class CreateAccountHandlerWithMapperTests
 {
     private readonly IMapper _realMapper;

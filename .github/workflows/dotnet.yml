@@ -1,4 +1,4 @@
-name: CI - AccountService
+name: Build and Test
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup .NET
@@ -18,11 +18,27 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore
+      - name: Restore dependencies
         run: dotnet restore AccountService.sln
 
       - name: Build
         run: dotnet build AccountService.sln --no-restore --configuration Release
 
-      - name: Run tests
-        run: dotnet test AccountService.sln --no-build --configuration Release --logger "trx;LogFileName=test_results.trx"
+      - name: Run unit tests
+        run: dotnet test AccountService.sln --configuration Release --no-build --filter "Category=Unit" --logger "trx;LogFileName=unit-tests.trx"
+      - name: Run integration tests
+        run: dotnet test AccountService.sln --configuration Release --no-build --filter "Category=Integration" --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: '**/TestResults/unit-tests.trx'
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: '**/TestResults/integration-tests.trx'
