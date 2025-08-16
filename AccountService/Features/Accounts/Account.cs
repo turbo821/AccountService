@@ -24,12 +24,12 @@ public class Account
 
         switch (transaction.Type)
         {
-            case TransactionType.Credit when Balance < transaction.Amount:
+            case TransactionType.Debit when Balance < transaction.Amount:
                 throw new InvalidOperationException("Insufficient funds for this transaction");
-            case TransactionType.Credit:
+            case TransactionType.Debit:
                 Balance -= transaction.Amount;
                 break;
-            case TransactionType.Debit:
+            case TransactionType.Credit:
                 Balance += transaction.Amount;
                 break;
             default:

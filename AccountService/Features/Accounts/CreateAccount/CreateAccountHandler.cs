@@ -22,14 +22,14 @@ public class CreateAccountHandler(
             throw new ArgumentException("Unsupported currency");
 
         var account = mapper.Map<Account>(request);
-
         var accountOpenedEvent = mapper.Map<AccountOpened>(account);
 
         await using var transaction = await accRepo.BeginTransactionAsync();
         try
         {
-            await accRepo.AddAsync(account);
-            await outboxRepo.AddAsync(accountOpenedEvent, "account.events", "account.opened");
+            await accRepo.AddAsync(account, transaction);
+            await outboxRepo.AddAsync(accountOpenedEvent, "account.events", "account.opened", transaction);
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch 

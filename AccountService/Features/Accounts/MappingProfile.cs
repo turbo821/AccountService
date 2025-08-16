@@ -63,6 +63,16 @@ public class MappingProfile : Profile
             .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
             .ForCtorParam("OperationId", opt => opt.MapFrom(src => src.Id))
             .ForCtorParam("Reason", opt => opt.MapFrom(src => src.Description));
+
+        CreateMap<Account, AccountInterestUpdated>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForCtorParam("AccountId", opt => opt.MapFrom(src => src.Id))
+            .ForCtorParam("InterestRate", opt => opt.MapFrom(src => src.InterestRate!.Value));
+
+        CreateMap<UpdateAccountCommand, AccountUpdated>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow));
     }
 }
 

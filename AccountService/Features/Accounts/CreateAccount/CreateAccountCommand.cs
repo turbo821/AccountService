@@ -7,7 +7,7 @@ namespace AccountService.Features.Accounts.CreateAccount;
 /// Команда для создания нового банковского счёта.
 /// </summary>
 /// <param name="OwnerId">ID владельца.</param>
-/// <param name="Type">Тип счёта (Checking, Debit, Credit).</param>
+/// <param name="Type">Тип счёта (Checking, Credit, Debit).</param>
 /// <param name="Currency">Валюта счёта ISO 4217 (например, RUB, USD).</param>
 /// <param name="InterestRate">Процентная ставка (только для сберегательных или кредитных счетов).</param>
 public record CreateAccountCommand(

@@ -20,9 +20,9 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
 {
     [SuppressMessage("ReSharper", "StringLiteralTypo")]
     private readonly PostgreSqlContainer _postgresContainer = new PostgreSqlBuilder()
-        .WithDatabase("test_db")
-        .WithUsername("postgres")
-        .WithPassword("postgres")
+        .WithDatabase(Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "test_db")
+        .WithUsername(Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres")
+        .WithPassword(Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres")
         .WithImage("postgres:17")
         .WithWaitStrategy(Wait.ForUnixContainer()
             .UntilCommandIsCompleted("pg_isready -U postgres"))

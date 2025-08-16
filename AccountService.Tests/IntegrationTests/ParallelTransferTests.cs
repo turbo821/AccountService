@@ -35,7 +35,7 @@ public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, 
         var createAccountCmd2 = new
         {
             OwnerId = ownerId,
-            Type = "Checking",
+            Type = AccountType.Checking,
             Currency = "USD",
             InterestRate = (decimal?)null
         };
@@ -67,7 +67,7 @@ public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, 
         {
             Amount = amount,
             Currency = currency,
-            Type = "Debit",
+            Type = TransactionType.Credit,
             Description = "Initial deposit"
         };
 

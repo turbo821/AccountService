@@ -1,4 +1,6 @@
-﻿namespace AccountService.Features.Accounts.Contracts;
+﻿using AccountService.Application.Models;
+
+namespace AccountService.Features.Accounts.Contracts;
 
 public record TransferCompleted(
     Guid EventId,
@@ -7,5 +9,6 @@ public record TransferCompleted(
     Guid DestinationAccountId,
     decimal Amount,
     string Currency,
-    Guid TransferId
-);
+    Guid DebitTransactionId,
+    Guid CreditTransactionId
+) : DomainEvent(EventId, OccurredAt);

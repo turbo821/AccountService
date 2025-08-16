@@ -16,7 +16,7 @@ public class GetAccountStatementHandlerTests
     {
         var config = new MapperConfiguration(cfg =>
         {
-            cfg.AddProfile<MappingProfile>(); // Предполагается, что у тебя есть mapping Account → AccountStatementDto и Transaction → TransactionDto
+            cfg.AddProfile<MappingProfile>();
         }, new LoggerFactory());
 
         _mapper = config.CreateMapper();
@@ -42,7 +42,7 @@ public class GetAccountStatementHandlerTests
                 CounterpartyAccountId = Guid.NewGuid(),
                 Amount = 100m,
                 Currency = "USD",
-                Type = TransactionType.Debit,
+                Type = TransactionType.Credit,
                 Description = "Deposit",
                 Timestamp = DateTime.UtcNow.AddDays(-5)
             },
@@ -53,7 +53,7 @@ public class GetAccountStatementHandlerTests
                 CounterpartyAccountId = Guid.NewGuid(),
                 Amount = 50m,
                 Currency = "USD",
-                Type = TransactionType.Credit,
+                Type = TransactionType.Debit,
                 Description = "Withdrawal",
                 Timestamp = DateTime.UtcNow.AddDays(-2)
             }

@@ -8,10 +8,10 @@ public enum TransactionType
     /// <summary>
     /// Поступление средств на счёт.
     /// </summary>
-    Debit = 0,
+    Credit = 0,
 
     /// <summary>
     /// Списание средств со счёта.
     /// </summary>
-    Credit = 1
+    Debit = 1
 }

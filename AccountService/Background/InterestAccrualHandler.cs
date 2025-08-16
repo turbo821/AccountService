@@ -20,7 +20,7 @@ public class InterestAccrualHandler(IAccountRepository repo,
 
                 var interestAccrued = new InterestAccrued(Guid.NewGuid(), DateTime.UtcNow, account.Id,
                     DateTime.Now.AddDays(-1), DateTime.Now, interestAmount);
-                await outboxRepo.AddAsync(interestAccrued, "account.events", "money.debited");
+                await outboxRepo.AddAsync(interestAccrued, "account.events", "money.credited", transaction);
 
                 await transaction.CommitAsync();
                 logger.LogInformation("Daily interest accrual completed successfully");

@@ -18,7 +18,7 @@ public class AccountTests
 
         var transaction = new Transaction
         {
-            Type = TransactionType.Credit,
+            Type = TransactionType.Debit,
             Amount = 50m,
             Currency = "USD",
             Description = "1"
@@ -47,7 +47,7 @@ public class AccountTests
 
         var transaction = new Transaction
         {
-            Type = TransactionType.Credit,
+            Type = TransactionType.Debit,
             Amount = 50m,
             Currency = "USD",
             Description = "1"
@@ -73,7 +73,7 @@ public class AccountTests
 
         var transaction = new Transaction
         {
-            Type = TransactionType.Debit,
+            Type = TransactionType.Credit,
             Amount = 20m,
             Currency = "USD",
             Description = "1"
@@ -128,7 +128,7 @@ public class AccountTests
 
         var transaction = new Transaction
         {
-            Type = TransactionType.Debit,
+            Type = TransactionType.Credit,
             Amount = 10m,
             Currency = "EUR",
             Description = "1"

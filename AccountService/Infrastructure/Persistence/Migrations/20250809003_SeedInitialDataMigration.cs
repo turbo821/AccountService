@@ -66,7 +66,7 @@ public class SeedInitialDataMigration : Migration
                 AccountId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 Amount = 100m,
                 Currency = "USD",
-                Type = TransactionType.Debit,
+                Type = TransactionType.Credit,
                 Description = "Initial deposit",
                 Timestamp = new DateTime(2025, 4, 22)
             },
@@ -76,7 +76,7 @@ public class SeedInitialDataMigration : Migration
                 AccountId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
                 Amount = 50m,
                 Currency = "RUB",
-                Type = TransactionType.Credit,
+                Type = TransactionType.Debit,
                 Description = "Initial credit",
                 Timestamp = DateTime.UtcNow
             },
@@ -86,7 +86,7 @@ public class SeedInitialDataMigration : Migration
                 AccountId = Guid.Parse("55555555-5555-5555-5555-555555555555"),
                 Amount = 500m,
                 Currency = "RUB",
-                Type = TransactionType.Debit,
+                Type = TransactionType.Credit,
                 Description = "Money transaction",
                 Timestamp = DateTime.UtcNow.AddHours(-2)
             }
@@ -107,7 +107,7 @@ public class SeedInitialDataMigration : Migration
                     timestamp = transaction.Timestamp
                 });
 
-            if (transaction.Type == TransactionType.Debit)
+            if (transaction.Type == TransactionType.Credit)
             {
                 Execute.Sql($@"
                     UPDATE accounts 

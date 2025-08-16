@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Data;
 using System.Data.Common;
+using AccountService.Application.Abstractions;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
@@ -13,6 +14,7 @@ public class TransferBetweenAccountsHandlerTests
 {
     private readonly IMapper _mapper;
     private readonly Mock<IAccountRepository> _repoMock = new();
+    private readonly Mock<IOutboxRepository> _outboxRepositoryMock = new();
     private readonly Mock<ICurrencyValidator> _currencyValidatorMock = new();
     private readonly Mock<DbTransaction> _mockDbTransaction = new();
 
@@ -27,7 +29,7 @@ public class TransferBetweenAccountsHandlerTests
     }
 
     private TransferBetweenAccountsHandler CreateHandler()
-        => new(_repoMock.Object, _mapper, _currencyValidatorMock.Object);
+        => new(_repoMock.Object, _outboxRepositoryMock.Object, _mapper, _currencyValidatorMock.Object);
 
     [Fact]
     public async Task Handle_ShouldTransferFunds_WhenDataIsValid()

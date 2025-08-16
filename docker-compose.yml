@@ -50,7 +50,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: account_db
     volumes:
-      - ./.containers/postgres_data:/var/lib/postgresql/data
+      - ./containers/postgres_data:/var/lib/postgresql/data
     ports:
       - 5432
     healthcheck:
@@ -68,7 +68,7 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbitmq_management load_definitions "/opt/definitions.json"
     volumes:
-      - ./.containers/rabbitmq_data:/var/lib/rabbitmq
+      - ./containers/rabbitmq_data:/var/lib/rabbitmq
       - ./configurations/definitions.json:/opt/definitions.json
     ports:
       - 5672

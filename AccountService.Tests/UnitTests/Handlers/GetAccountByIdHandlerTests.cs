@@ -41,7 +41,7 @@ public class GetAccountByIdHandlerTests
             OpenedAt = DateTime.UtcNow.AddDays(-10)
         };
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync(account);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, null)).ReturnsAsync(account);
 
         var handler = CreateHandler();
 
@@ -62,7 +62,7 @@ public class GetAccountByIdHandlerTests
         Assert.Equal(account.InterestRate, result.Data.InterestRate);
         Assert.Equal(account.OpenedAt, result.Data.OpenedAt);
 
-        _repoMock.Verify(r => r.GetByIdAsync(accountId), Times.Once);
+        _repoMock.Verify(r => r.GetByIdAsync(accountId, null), Times.Once);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class GetAccountByIdHandlerTests
         // Arrange
         var accountId = Guid.NewGuid();
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync((Account?)null);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, null)).ReturnsAsync((Account?)null);
 
         var handler = CreateHandler();
 
@@ -79,6 +79,6 @@ public class GetAccountByIdHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<KeyNotFoundException>(() => handler.Handle(query, CancellationToken.None));
-        _repoMock.Verify(r => r.GetByIdAsync(accountId), Times.Once);
+        _repoMock.Verify(r => r.GetByIdAsync(accountId, null), Times.Once);
     }
 }

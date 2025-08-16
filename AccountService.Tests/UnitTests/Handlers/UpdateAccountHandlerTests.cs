@@ -1,10 +1,12 @@
-﻿using AccountService.Features.Accounts;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Features.Accounts.UpdateAccount;
 using AutoMapper;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Data;
-using Microsoft.Extensions.Logging;
+using System.Data.Common;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
@@ -12,8 +14,10 @@ public class UpdateAccountHandlerTests
 {
     private readonly IMapper _mapper;
     private readonly Mock<IAccountRepository> _repoMock = new();
+    private readonly Mock<IOutboxRepository> _outboxRepoMock = new();
     private readonly Mock<ICurrencyValidator> _currencyValidatorMock = new();
     private readonly Mock<IOwnerVerificator> _ownerVerificatorMock = new();
+    private readonly Mock<DbTransaction> _mockDbTransaction = new();
 
     public UpdateAccountHandlerTests()
     {
@@ -25,7 +29,7 @@ public class UpdateAccountHandlerTests
     }
 
     private UpdateAccountHandler CreateHandler() =>
-        new(_mapper, _repoMock.Object, _currencyValidatorMock.Object, _ownerVerificatorMock.Object);
+        new(_mapper, _repoMock.Object, _outboxRepoMock.Object, _currencyValidatorMock.Object, _ownerVerificatorMock.Object);
 
     [Fact]
     public async Task Handle_ShouldUpdateAccount_WhenDataIsValid()
@@ -55,10 +59,14 @@ public class UpdateAccountHandlerTests
             openedAt: null
         );
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync(existingAccount);
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
+
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Unspecified)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, _mockDbTransaction.Object)).ReturnsAsync(existingAccount);
         _ownerVerificatorMock.Setup(v => v.IsExists(ownerId)).Returns(true);
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Account>())).ReturnsAsync(1);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Account>(), _mockDbTransaction.Object)).ReturnsAsync(1);
 
         var handler = CreateHandler();
 
@@ -74,10 +82,12 @@ public class UpdateAccountHandlerTests
             a.Balance == 150 &&
             a.OpenedAt == existingAccount.OpenedAt &&
             a.Version == existingAccount.Version
-        )), Times.Once);
+        ), _mockDbTransaction.Object), Times.Once);
 
         Assert.NotNull(result);
         Assert.True(result.Success);
+        _mockDbTransaction.Verify(t => t.CommitAsync(CancellationToken.None), Times.Once);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Never);
     }
 
     [Fact]
@@ -85,7 +95,13 @@ public class UpdateAccountHandlerTests
     {
         // Arrange
         var accountId = Guid.NewGuid();
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync((Account?)null);
+
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
+
+        _currencyValidatorMock.Setup(v => v.IsExists(It.IsAny<string>())).ReturnsAsync(true);
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Unspecified)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, _mockDbTransaction.Object)).ReturnsAsync((Account?)null);
 
         var command = new UpdateAccountCommand(
             accountId,
@@ -103,6 +119,8 @@ public class UpdateAccountHandlerTests
             handler.Handle(command, CancellationToken.None));
 
         Assert.Contains(accountId.ToString(), ex.Message);
+        _mockDbTransaction.Verify(t => t.CommitAsync(CancellationToken.None), Times.Never);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -113,7 +131,12 @@ public class UpdateAccountHandlerTests
         var newOwnerId = Guid.NewGuid();
         var existingAccount = new Account { Id = accountId, OwnerId = Guid.NewGuid(), Currency = "USD", Version = 1 };
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync(existingAccount);
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
+
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Unspecified)).ReturnsAsync(_mockDbTransaction.Object);
+        _currencyValidatorMock.Setup(v => v.IsExists(It.IsAny<string>())).ReturnsAsync(true);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, _mockDbTransaction.Object)).ReturnsAsync(existingAccount);
         _ownerVerificatorMock.Setup(v => v.IsExists(newOwnerId)).Returns(false);
 
         var command = new UpdateAccountCommand(
@@ -130,6 +153,9 @@ public class UpdateAccountHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
             handler.Handle(command, CancellationToken.None));
+
+        _mockDbTransaction.Verify(t => t.CommitAsync(CancellationToken.None), Times.Never);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -149,7 +175,7 @@ public class UpdateAccountHandlerTests
             null,
             null);
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync(existingAccount);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, It.IsAny<IDbTransaction>())).ReturnsAsync(existingAccount);
         _ownerVerificatorMock.Setup(v => v.IsExists(ownerId)).Returns(true);
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(false);
 
@@ -177,10 +203,14 @@ public class UpdateAccountHandlerTests
             null,
             null);
 
-        _repoMock.Setup(r => r.GetByIdAsync(accountId)).ReturnsAsync(existingAccount);
+        _mockDbTransaction.Setup(t => t.CommitAsync(CancellationToken.None));
+        _mockDbTransaction.Setup(t => t.RollbackAsync(CancellationToken.None));
+
+        _repoMock.Setup(r => r.BeginTransactionAsync(IsolationLevel.Unspecified)).ReturnsAsync(_mockDbTransaction.Object);
+        _repoMock.Setup(r => r.GetByIdAsync(accountId, _mockDbTransaction.Object)).ReturnsAsync(existingAccount);
         _ownerVerificatorMock.Setup(v => v.IsExists(ownerId)).Returns(true);
         _currencyValidatorMock.Setup(v => v.IsExists(command.Currency)).ReturnsAsync(true);
-        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Account>())).ReturnsAsync(0);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Account>(), null)).ReturnsAsync(0);
 
         var handler = CreateHandler();
 
@@ -189,5 +219,7 @@ public class UpdateAccountHandlerTests
             handler.Handle(command, CancellationToken.None));
 
         Assert.Contains("modified by another process", ex.Message);
+        _mockDbTransaction.Verify(t => t.CommitAsync(CancellationToken.None), Times.Never);
+        _mockDbTransaction.Verify(t => t.RollbackAsync(CancellationToken.None), Times.Once);
     }
 }

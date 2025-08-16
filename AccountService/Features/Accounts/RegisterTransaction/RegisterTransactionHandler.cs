@@ -4,7 +4,6 @@ using AccountService.Features.Accounts.Abstractions;
 using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 using MediatR;
-using Microsoft.Extensions.Logging;
 using System.Data;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
@@ -32,24 +31,24 @@ public class RegisterTransactionHandler(IAccountRepository accRepo,
 
             account.ConductTransaction(transaction);
 
-            if (request.Type == TransactionType.Credit)
-            {
-                var @event = mapper.Map<MoneyCredited>(transaction);
-                await outboxRepo.AddAsync(@event, "account.events", "money.credited");
-            }
-            else
-            {
-                var @event = mapper.Map<MoneyDebited>(transaction);
-                await outboxRepo.AddAsync(@event, "account.events", "money.debited");
-
-            }
-
             var updated = await accRepo.UpdateBalanceAsync(account, dbTransaction);
             if (updated == 0)
                 throw new DBConcurrencyException("Account was modified by another transaction");
 
             await accRepo.AddTransactionAsync(transaction, dbTransaction);
-            
+
+            if (request.Type == TransactionType.Credit)
+            {
+                var @event = mapper.Map<MoneyCredited>(transaction);
+                await outboxRepo.AddAsync(@event, "account.events", "money.credited", dbTransaction);
+            }
+            else
+            {
+                var @event = mapper.Map<MoneyDebited>(transaction);
+                await outboxRepo.AddAsync(@event, "account.events", "money.debited", dbTransaction);
+
+            }
+
             await dbTransaction.CommitAsync(cancellationToken);
         }
         catch

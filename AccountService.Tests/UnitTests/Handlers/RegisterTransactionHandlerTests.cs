@@ -39,7 +39,7 @@ public class RegisterTransactionHandlerTests
             AccountId: Guid.NewGuid(),
             Amount: 50m,
             Currency: "USD",
-            Type: TransactionType.Debit,
+            Type: TransactionType.Credit,
             Description: "Test transaction"
         );
 
@@ -94,7 +94,7 @@ public class RegisterTransactionHandlerTests
             AccountId: Guid.NewGuid(),
             Amount: 50m,
             Currency: "FAKE",
-            Type: TransactionType.Debit,
+            Type: TransactionType.Credit,
             Description: "Test"
         );
 
@@ -116,7 +116,7 @@ public class RegisterTransactionHandlerTests
             AccountId: Guid.NewGuid(),
             Amount: 50m,
             Currency: "USD",
-            Type: TransactionType.Debit,
+            Type: TransactionType.Credit,
             Description: "Test"
         );
 
@@ -144,7 +144,7 @@ public class RegisterTransactionHandlerTests
             AccountId: Guid.NewGuid(),
             Amount: 50m,
             Currency: "USD",
-            Type: TransactionType.Debit,
+            Type: TransactionType.Credit,
             Description: "Test"
         );
 

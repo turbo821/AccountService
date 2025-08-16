@@ -25,7 +25,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         return accounts;
     }
 
-    public async Task<Account?> GetByIdAsync(Guid id)
+    public async Task<Account?> GetByIdAsync(Guid id, IDbTransaction? transaction = null)
     {
         const string sql = 
             // ReSharper disable once StringLiteralTypo
@@ -44,7 +44,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                 WHERE id = @Id AND closed_at IS NULL
             """;
 
-        var account = await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = id });
+        var account = await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = id }, transaction);
         return account;
     }
 
@@ -120,7 +120,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             }, transaction);
     }
 
-    public async Task<int> UpdateAsync(Account account)
+    public async Task<int> UpdateAsync(Account account, IDbTransaction? transaction = null)
     {
         const string sql =
             // ReSharper disable once StringLiteralTypo
@@ -146,7 +146,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             account.InterestRate,
             account.OpenedAt,
             account.Version
-        });
+        }, transaction);
     }
 
     public async Task<int> UpdateBalanceAsync(Account account, IDbTransaction? transaction = null)
@@ -168,7 +168,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         }, transaction);
     }
 
-    public async Task<int> UpdateInterestRateAsync(Account account)
+    public async Task<int> UpdateInterestRateAsync(Account account, IDbTransaction? transaction = null)
     {
         const string sql =
             // ReSharper disable once StringLiteralTypo
@@ -184,10 +184,10 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             account.Id,
             account.InterestRate,
             account.Version
-        });
+        }, transaction);
     }
 
-    public async Task<Guid?> SoftDeleteAsync(Guid accountId)
+    public async Task<Guid?> SoftDeleteAsync(Guid accountId, IDbTransaction? transaction = null)
     {
         const string sql = 
             """
@@ -201,7 +201,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         {
             Id = accountId,
             ClosedAt = DateTime.UtcNow
-        });
+        }, transaction);
     }
 
     public async Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null)

@@ -42,7 +42,7 @@ public class CreateAccrueInterestProcedure : Migration
                      account_id, 
                      interest_amount, 
                      deposit_account.currency, 
-                     0, -- TransactionType.Debit
+                     0, -- TransactionType.Credit
                      'Daily interest accrual', 
                      now());
                 

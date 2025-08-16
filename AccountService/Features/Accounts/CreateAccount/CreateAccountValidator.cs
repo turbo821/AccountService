@@ -21,7 +21,7 @@ public class CreateAccountValidator : AbstractValidator<CreateAccountCommand>
         RuleFor(x => x.InterestRate)
             .NotNull()
             .When(x => x.Type is AccountType.Deposit or AccountType.Credit)
-            .WithMessage("Interest rate must be provided for Deposit and Credit accounts");
+            .WithMessage("Interest rate must be provided for Deposit and Debit accounts");
 
         RuleFor(x => x.InterestRate)
             .Must(rate => rate >= 0)
