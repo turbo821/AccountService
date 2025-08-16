@@ -1,4 +1,6 @@
-﻿namespace AccountService.Features.Accounts.Contracts;
+﻿using AccountService.Application.Models;
+
+namespace AccountService.Features.Accounts.Contracts;
 
 public record InterestAccrued(
     Guid EventId,
@@ -7,4 +9,4 @@ public record InterestAccrued(
     DateTime PeriodFrom,
     DateTime PeriodTo,
     decimal Amount
-);
+) : DomainEvent(EventId, OccurredAt);

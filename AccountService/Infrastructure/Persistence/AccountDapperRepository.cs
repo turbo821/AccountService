@@ -9,16 +9,19 @@ namespace AccountService.Infrastructure.Persistence;
 
 public class AccountDapperRepository(IDbConnection connection) : IAccountRepository
 {
-    public async Task<List<Account>> GetAllAsync(Guid? ownerId)
+    public async Task<List<Account>> GetAllAsync(Guid? ownerId, AccountType? type = null)
     {
-        const string sql = 
+        const string sql =
             """
                    SELECT * FROM accounts 
                    WHERE closed_at IS NULL
                    AND (@OwnerId IS NULL OR owner_id = @OwnerId)
+                   AND (@Type IS NULL OR type = @Type)
             """;
 
-        var accounts = (await connection.QueryAsync<Account>(sql, new { OwnerId = ownerId })).ToList();
+        var accounts = (await connection.QueryAsync<Account>(sql,
+            new { OwnerId = ownerId, Type = type })).ToList();
+
         return accounts;
     }
 
@@ -224,12 +227,17 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         }, dbTransaction);
     }
 
-    public async Task AccrueInterestForAllAsync(IDbTransaction? transaction = null)
+    public async Task<decimal> AccrueInterestByIdAsync(Guid accountId, IDbTransaction? transaction = null)
     {
-        await connection.ExecuteAsync(
-            "SELECT accrue_interest_all()",
+        const string sql = "SELECT accrue_interest(@AccountId);";
+
+        var result = await connection.ExecuteScalarAsync<decimal>(
+            sql,
+            new { AccountId = accountId },
             transaction: transaction
         );
+
+        return result;
     }
 
     public async Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)

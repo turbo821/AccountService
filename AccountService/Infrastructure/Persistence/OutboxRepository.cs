@@ -4,7 +4,7 @@ using Dapper;
 using Newtonsoft.Json;
 using System.Data;
 
-namespace AccountService.Infrastructure.Services;
+namespace AccountService.Infrastructure.Persistence;
 
 public class OutboxRepository(IDbConnection connection) : IOutboxRepository
 {

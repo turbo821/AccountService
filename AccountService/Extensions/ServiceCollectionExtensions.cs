@@ -190,14 +190,10 @@ public  static class ServiceCollectionExtensions
             {
                 HostName = configuration["RabbitMQ:Host"]!,
                 UserName = configuration["RabbitMQ:Username"]!,
-                Password = configuration["RabbitMQ:Password"]!,
-                DispatchConsumersAsync = true
+                Password = configuration["RabbitMQ:Password"]!
             });
 
-        services.AddSingleton<IConnection>(sp =>
-            sp.GetRequiredService<IConnectionFactory>().CreateConnection());
-
-        services.AddScoped<IRabbitMqService, RabbitMqService>();
+        services.AddSingleton<IRabbitMqService, RabbitMqService>();
 
         return services;
     }

@@ -1,4 +1,6 @@
-﻿namespace AccountService.Features.Accounts.Contracts;
+﻿using AccountService.Application.Models;
+
+namespace AccountService.Features.Accounts.Contracts;
 
 public record MoneyCredited(
     Guid EventId,
@@ -6,5 +8,6 @@ public record MoneyCredited(
     Guid AccountId,
     decimal Amount,
     string Currency,
-    Guid OperationId
-);
+    Guid OperationId,
+    string Reason
+) : DomainEvent(EventId, OccurredAt);

@@ -4,28 +4,33 @@ using RabbitMQ.Client.Events;
 
 namespace AccountService.Infrastructure.Services;
 
-public class RabbitMqService(IConnection connection) : IRabbitMqService
+public class RabbitMqService(IConnectionFactory connectionFactory) : IRabbitMqService
 {
-    public void Publish(string exchange, string routingKey, byte[] body)
-    {
-        using var channel = connection.CreateModel();
+    private readonly IConnection _connection = connectionFactory.CreateConnectionAsync().Result;
 
-        channel.BasicPublish(
-            exchange: exchange,
-            routingKey: routingKey,
-            basicProperties: null,
-            body: body
-        );
+    public async Task Publish(string exchange, string routingKey, byte[] body)
+    {
+        await using var channel = await _connection.CreateChannelAsync();
+
+        await channel.BasicPublishAsync(
+            exchange: exchange, 
+            routingKey: routingKey, 
+            body: body);
     }
 
-    public void Subscribe(string queue, Action<byte[]> handler)
+    public async Task Subscribe(string queue, Action<byte[]> handler)
     {
-        using var channel = connection.CreateModel();
+        await using var channel = await _connection.CreateChannelAsync();
 
-        var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (_, ea) => handler(ea.Body.ToArray());
+        var consumer = new AsyncEventingBasicConsumer(channel);
 
-        channel.BasicConsume(
+        consumer.ReceivedAsync += (_, ea) =>
+        {
+            handler(ea.Body.ToArray());
+            return Task.CompletedTask;
+        };
+
+        await channel.BasicConsumeAsync(
             queue: queue,
             autoAck: true,
             consumer: consumer

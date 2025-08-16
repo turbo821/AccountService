@@ -23,14 +23,7 @@ public class CreateAccountHandler(
 
         var account = mapper.Map<Account>(request);
 
-        var accountOpenedEvent = new AccountOpened(
-            Guid.NewGuid(),
-            DateTime.UtcNow,
-            account.Id,
-            account.OwnerId,
-            account.Currency,
-            account.Type.ToString()
-        );
+        var accountOpenedEvent = mapper.Map<AccountOpened>(account);
 
         await using var transaction = await accRepo.BeginTransactionAsync();
         try

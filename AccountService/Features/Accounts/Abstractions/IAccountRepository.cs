@@ -5,7 +5,7 @@ namespace AccountService.Features.Accounts.Abstractions;
 
 public interface IAccountRepository
 {
-    Task<List<Account>> GetAllAsync(Guid? ownerId);
+    Task<List<Account>> GetAllAsync(Guid? ownerId, AccountType? type = null);
     Task<Account?> GetByIdAsync(Guid accountId);
     Task<Account?> GetByIdForUpdateAsync(Guid accountId, IDbTransaction transaction);
     Task<Account?> GetByIdWithTransactionsForPeriodAsync(Guid accountId, DateTime? from, DateTime? to);
@@ -17,6 +17,6 @@ public interface IAccountRepository
     Task<Guid?> SoftDeleteAsync(Guid accountId);
 
     Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
-    Task AccrueInterestForAllAsync(IDbTransaction? transaction = null);
+    Task<decimal> AccrueInterestByIdAsync(Guid accountId, IDbTransaction? transaction = null);
     Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
 }
