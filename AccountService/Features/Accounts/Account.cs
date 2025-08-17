@@ -14,6 +14,7 @@ public class Account
     public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ClosedAt { get; set; }
     public long Version { get; set; }
+    public bool IsFrozen { get; set; }
 
     public List<Transaction> Transactions { get; set; } = [];
 

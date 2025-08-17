@@ -20,6 +20,7 @@ public class CreateAccrueInterestProcedure : Migration
                 FROM accounts 
                 WHERE id = account_id AND type = 1 -- AccountType.Deposit
                 AND closed_at IS NULL
+                AND NOT is_frozen
                 FOR UPDATE;
                 
                 IF deposit_account IS NULL THEN

@@ -5,6 +5,7 @@ using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 using MediatR;
 using System.Data;
+using AccountService.Application.Contracts;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
@@ -25,7 +26,7 @@ public class RegisterTransactionHandler(IAccountRepository accRepo,
             var account = await accRepo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
 
             if (account == null)
-                throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
+                throw new KeyNotFoundException($"Account with id {request.AccountId} not found or is frozen");
 
             transaction = mapper.Map<Transaction>(request);
 
@@ -40,13 +41,21 @@ public class RegisterTransactionHandler(IAccountRepository accRepo,
             if (request.Type == TransactionType.Credit)
             {
                 var @event = mapper.Map<MoneyCredited>(transaction);
+                @event.Meta = new EventMeta(
+                    "account-service",
+                    Guid.NewGuid(), @event.EventId
+                );
                 await outboxRepo.AddAsync(@event, "account.events", "money.credited", dbTransaction);
             }
             else
             {
                 var @event = mapper.Map<MoneyDebited>(transaction);
-                await outboxRepo.AddAsync(@event, "account.events", "money.debited", dbTransaction);
+                @event.Meta = new EventMeta(
+                    "account-service",
+                    Guid.NewGuid(), @event.EventId
+                );
 
+                await outboxRepo.AddAsync(@event, "account.events", "money.debited", dbTransaction);
             }
 
             await dbTransaction.CommitAsync(cancellationToken);

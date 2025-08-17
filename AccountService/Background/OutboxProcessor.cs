@@ -4,7 +4,7 @@ using System.Text;
 
 namespace AccountService.Background;
 
-public class OutboxProcessor(IOutboxRepository repo, IRabbitMqService rabbitMqService, ILogger<OutboxProcessor> logger)
+public class OutboxProcessor(IOutboxRepository repo, IBrokerService brokerService, ILogger<OutboxProcessor> logger)
 {
     [AutomaticRetry(Attempts = 3)]
     public async Task ProcessOutboxMessages()
@@ -21,7 +21,7 @@ public class OutboxProcessor(IOutboxRepository repo, IRabbitMqService rabbitMqSe
             try
             {
                 var eventBytes = Encoding.UTF8.GetBytes(msg.Payload);
-                await rabbitMqService.Publish(msg.Exchange, msg.RoutingKey, eventBytes);
+                await brokerService.Publish(msg.Exchange, msg.RoutingKey, eventBytes);
 
                 logger.LogInformation("Message {MessageId} published successfully", msg.Id);
 

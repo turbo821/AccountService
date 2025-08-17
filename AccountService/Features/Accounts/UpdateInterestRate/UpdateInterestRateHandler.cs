@@ -3,6 +3,7 @@ using AccountService.Features.Accounts.Abstractions;
 using MediatR;
 using System.Data;
 using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
 using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 
@@ -31,6 +32,11 @@ public class UpdateInterestRateHandler(IAccountRepository accRepo,
                 throw new DBConcurrencyException("Account was modified by another process");
 
             var accountInterestUpdated = mapper.Map<AccountInterestUpdated>(account);
+            accountInterestUpdated.Meta = new EventMeta(
+                "account-service",
+                Guid.NewGuid(), accountInterestUpdated.EventId
+            );  
+
             await outboxRepo.AddAsync(accountInterestUpdated, "account.events", "account.interest.updated",
                 transaction);
 

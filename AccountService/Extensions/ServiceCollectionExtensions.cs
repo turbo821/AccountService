@@ -11,8 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Data;
 using System.Reflection;
+using AccountService.Infrastructure.Consumers;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
 using RabbitMQ.Client;
 using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
@@ -45,6 +47,7 @@ public  static class ServiceCollectionExtensions
     {
         services.AddScoped<IAccountRepository, AccountDapperRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IInboxRepository, InboxRepository>();
 
         services.AddMediatR(cfg =>
         {
@@ -64,7 +67,6 @@ public  static class ServiceCollectionExtensions
 
         services.AddHttpClient();
         services.AddScoped<IAuthService, AuthService>();
-
         return services;
     }
 
@@ -193,7 +195,14 @@ public  static class ServiceCollectionExtensions
                 Password = configuration["RabbitMQ:Password"]!
             });
 
-        services.AddSingleton<IRabbitMqService, RabbitMqService>();
+        services.AddSingleton<IBrokerService, RabbitMqService>();
+
+        services.AddScoped<IConsumerHandler, AntifraudConsumer>();
+        services.AddScoped<IConsumerHandler, AuditConsumer>();
+
+        services.AddScoped<IRabbitMqHealthCheck, RabbitMqHealthCheck>();
+
+        // services.AddHostedService<ConsumerHostedService>();
 
         return services;
     }

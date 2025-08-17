@@ -4,6 +4,7 @@ using AccountService.Features.Accounts.Abstractions;
 using AutoMapper;
 using MediatR;
 using System.Data;
+using AccountService.Application.Contracts;
 using AccountService.Features.Accounts.Contracts;
 
 namespace AccountService.Features.Accounts.TransferBetweenAccounts;
@@ -78,12 +79,33 @@ public class TransferBetweenAccountsHandler(IAccountRepository accRepo,
                 throw new InvalidOperationException("Final balances mismatch — rolling back");
             }
 
-            var @event = new TransferCompleted(
+            var correlationId = Guid.NewGuid();
+
+            var transferEvent = new TransferCompleted(
                 Guid.NewGuid(), DateTime.UtcNow,
                 fromAccount.Id, toAccount.Id,
                 request.Amount, request.Currency,
                 debitTransaction.Id, creditTransaction.Id);
-            await outboxRepo.AddAsync(@event, "account.events", "money.transfer.completed", dbTransaction);
+            transferEvent.Meta = new EventMeta(
+                "account-service",
+                correlationId, transferEvent.EventId
+            );
+
+            var debitEvent = mapper.Map<MoneyDebited>(debitTransaction);
+            debitEvent.Meta = new EventMeta(
+                "account-service",
+                correlationId, transferEvent.EventId
+            );
+
+            var creditEvent = mapper.Map<MoneyCredited>(creditTransaction);
+            creditEvent.Meta = new EventMeta(
+                "account-service",
+                correlationId, transferEvent.EventId
+            );
+
+            await outboxRepo.AddAsync(transferEvent, "account.events", "money.transfer.completed", dbTransaction);
+            await outboxRepo.AddAsync(debitEvent, "account.events", "money.debited", dbTransaction);
+            await outboxRepo.AddAsync(creditEvent, "account.events", "money.credited", dbTransaction);
 
             await dbTransaction.CommitAsync(cancellationToken);
         }

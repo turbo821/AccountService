@@ -1,7 +1,6 @@
 ﻿using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using Dapper;
-using Npgsql;
 using System.Data;
 using System.Data.Common;
 
@@ -39,6 +38,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                     interest_rate,
                     opened_at,
                     closed_at,
+                    is_frozen,
                     xmin::text::bigint AS Version
                 FROM accounts 
                 WHERE id = @Id AND closed_at IS NULL
@@ -53,9 +53,10 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         const string sql =
             // ReSharper disable once StringLiteralTypo
             """
-               SELECT id, currency, balance, xmin::text::bigint as Version 
+               SELECT id, currency, balance, is_frozen, xmin::text::bigint as Version 
                                             FROM accounts 
-                                            WHERE id = @Id 
+                                            WHERE id = @Id AND closed_at IS NULL
+                                            AND NOT is_frozen
                                             FOR UPDATE
             """;
         return await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = accountId }, transaction);
@@ -132,7 +133,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                    balance = @Balance,
                    interest_rate = @InterestRate,
                    opened_at=@OpenedAt
-               WHERE id = @Id AND closed_at IS NULL 
+               WHERE id = @Id AND closed_at IS NULL
                AND xmin::text::bigint = @Version
             """;
 
@@ -155,9 +156,10 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             // ReSharper disable once StringLiteralTypo
             """
               UPDATE accounts SET
-                  balance = @Balance
+                balance = @Balance
               WHERE id = @Id AND closed_at IS NULL
-              AND xmin::text::bigint = @Version
+                AND NOT is_frozen
+                AND xmin::text::bigint = @Version
             """;
 
         return await connection.ExecuteAsync(sql, new
@@ -242,12 +244,20 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
 
     public async Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
-        if (connection is not NpgsqlConnection conn)
-            throw new InvalidOperationException("Connection must be NpgsqlConnection");
+        if (connection is not DbConnection conn)
+            throw new InvalidOperationException("Connection must be DbConnection");
 
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
 
         return await conn.BeginTransactionAsync(isolationLevel);
+    }
+
+    public async Task UpdateIsFrozen(Guid ownerId, bool isFrozen, IDbTransaction? transaction = null)
+    {
+        await connection.ExecuteAsync(
+            "UPDATE accounts SET frozen = @IsFrozen WHERE owner_id = @OwnerId AND closed_at IS NULL",
+            new { IsFrozen = isFrozen, OwnerId = ownerId }, transaction);
+
     }
 }

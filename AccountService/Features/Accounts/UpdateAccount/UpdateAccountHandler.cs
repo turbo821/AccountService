@@ -4,6 +4,7 @@ using AutoMapper;
 using MediatR;
 using System.Data;
 using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
 using AccountService.Features.Accounts.Contracts;
 
 namespace AccountService.Features.Accounts.UpdateAccount;
@@ -42,6 +43,11 @@ public class UpdateAccountHandler(
                 throw new DBConcurrencyException("Account was modified by another process");
 
             var accountUpdated = mapper.Map<AccountUpdated>(request);
+            accountUpdated.Meta = new EventMeta(
+                "account-service",
+                Guid.NewGuid(), accountUpdated.EventId
+            );  
+
             await outboxRepo.AddAsync(accountUpdated, "account.events", "account.updated", transaction);
 
             await transaction.CommitAsync(cancellationToken);

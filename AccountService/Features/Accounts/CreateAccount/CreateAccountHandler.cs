@@ -1,4 +1,5 @@
 ﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
 using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Features.Accounts.Contracts;
@@ -23,6 +24,10 @@ public class CreateAccountHandler(
 
         var account = mapper.Map<Account>(request);
         var accountOpenedEvent = mapper.Map<AccountOpened>(account);
+        accountOpenedEvent.Meta = new EventMeta(
+            "account-service",
+            Guid.NewGuid(), accountOpenedEvent.EventId
+        );
 
         await using var transaction = await accRepo.BeginTransactionAsync();
         try

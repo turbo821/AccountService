@@ -1,4 +1,4 @@
-﻿using AccountService.Application.Models;
+﻿using AccountService.Application.Contracts;
 
 namespace AccountService.Features.Accounts.Contracts;
 

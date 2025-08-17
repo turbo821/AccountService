@@ -2,6 +2,7 @@
 using AccountService.Features.Accounts.Abstractions;
 using MediatR;
 using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
 using AccountService.Features.Accounts.Contracts;
 
 namespace AccountService.Features.Accounts.DeleteAccount;
@@ -22,6 +23,11 @@ public class DeleteAccountHandler(IAccountRepository accRepo,
                 throw new KeyNotFoundException($"Account {request.AccountId} not found.");
 
             var accountClosed = new AccountClosed(Guid.NewGuid(), DateTime.UtcNow, accountId.Value);
+            accountClosed.Meta = new EventMeta(
+                "account-service",
+                Guid.NewGuid(), accountClosed.EventId
+            );
+
             await outboxRepo.AddAsync(accountClosed, "account.events", "account.closed", transaction);
 
             await transaction.CommitAsync(cancellationToken);

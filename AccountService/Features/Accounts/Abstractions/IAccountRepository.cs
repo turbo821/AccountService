@@ -15,8 +15,8 @@ public interface IAccountRepository
     Task<int> UpdateBalanceAsync(Account account, IDbTransaction? transaction = null);
     Task<int> UpdateInterestRateAsync(Account account, IDbTransaction? transaction = null);
     Task<Guid?> SoftDeleteAsync(Guid accountId, IDbTransaction? transaction = null);
-
     Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null);
     Task<decimal> AccrueInterestByIdAsync(Guid accountId, IDbTransaction? transaction = null);
     Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
+    Task UpdateIsFrozen(Guid ownerId, bool isFrozen, IDbTransaction? transaction = null);
 }

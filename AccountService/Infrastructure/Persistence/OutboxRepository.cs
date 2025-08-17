@@ -1,7 +1,9 @@
 ﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
 using AccountService.Application.Models;
 using Dapper;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System.Data;
 
 namespace AccountService.Infrastructure.Persistence;
@@ -22,7 +24,10 @@ public class OutboxRepository(IDbConnection connection) : IOutboxRepository
             Type = @event.GetType().Name,
             Exchange = exchange,
             RoutingKey = routingKey,
-            Payload = JsonConvert.SerializeObject(@event),
+            Payload = JsonConvert.SerializeObject(@event, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            }),
             @event.OccurredAt
         }, transaction);
     }
@@ -39,5 +44,11 @@ public class OutboxRepository(IDbConnection connection) : IOutboxRepository
         await connection.ExecuteAsync(
             "UPDATE outbox_messages SET processed_at = @Now WHERE id = @Id",
             new { Now = DateTime.UtcNow, Id = id });
+    }
+
+    public async Task<int> GetPendingCountAsync()
+    {
+        const string sql = "SELECT COUNT(*) FROM outbox_messages WHERE processed_at IS NULL";
+        return await connection.ExecuteScalarAsync<int>(sql);
     }
 }
