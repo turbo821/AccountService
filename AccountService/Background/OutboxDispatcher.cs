@@ -1,10 +1,11 @@
 ﻿using AccountService.Application.Abstractions;
-using Hangfire;
 using System.Text;
-
 namespace AccountService.Background;
 
-public class OutboxDispatcher(IOutboxRepository repo, IBrokerService brokerService, ILogger<OutboxDispatcher> logger)
+public class OutboxDispatcher(IOutboxRepository repo,
+    IRabbitMqHealthChecker healthChecker, 
+    IBrokerService brokerService, 
+    ILogger<OutboxDispatcher> logger)
 {
     private const int MaxRetries = 5;
     private readonly TimeSpan _delay = TimeSpan.FromSeconds(2);
@@ -12,6 +13,12 @@ public class OutboxDispatcher(IOutboxRepository repo, IBrokerService brokerServi
     public async Task ProcessOutboxMessages()
     {
         logger.LogInformation("Starting OutboxDispatcher...");
+
+        if (!await healthChecker.IsAliveAsync())
+        {
+            logger.LogWarning("RabbitMQ is not available. OutboxDispatcher will skip this run.");
+            return;
+        }
 
         var messages = await repo.GetMessagesAsync();
         logger.LogInformation("{Count} message(s) fetched from outbox", messages.Count);

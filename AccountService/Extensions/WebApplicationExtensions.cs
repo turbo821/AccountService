@@ -51,20 +51,40 @@ public static class WebApplicationExtensions
 
     public static WebApplication UseHangfire(this WebApplication app)
     {
-        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        try
         {
-            Authorization = [new HangfireAuthorizationFilter()]
-        });
+            using (var scope = app.Services.CreateScope())
+            {
+                var storage = scope.ServiceProvider.GetService<JobStorage>();
+                if (storage is null)
+                {
+                    app.Logger.LogWarning("Hangfire storage not configured. Skipping Hangfire setup.");
+                    return app;
+                }
+            }
 
-        RecurringJob.AddOrUpdate<InterestAccrualHandler>(
-            "accrue-interest-daily",
-            s => s.AccrueDailyInterestAsync(),
-            Cron.Daily
-        );
-        RecurringJob.AddOrUpdate<OutboxDispatcher>(
-            "outbox-processor",
-            processor => processor.ProcessOutboxMessages(),
-            "*/10 * * * * *"); 
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = [new HangfireAuthorizationFilter()]
+            });
+
+            RecurringJob.AddOrUpdate<InterestAccrualHandler>(
+                "accrue-interest-daily",
+                s => s.AccrueDailyInterestAsync(),
+                Cron.Daily
+            );
+
+            RecurringJob.AddOrUpdate<OutboxDispatcher>(
+                "outbox-processor",
+                processor => processor.ProcessOutboxMessages(),
+                "*/10 * * * * *");
+            
+            app.Logger.LogInformation("Hangfire successfully configured.");
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Hangfire setup failed. Hangfire will not be used.");
+        }
 
         return app;
     }

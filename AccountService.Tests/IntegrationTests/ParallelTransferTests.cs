@@ -7,8 +7,9 @@ using Xunit.Abstractions;
 
 namespace AccountService.Tests.IntegrationTests;
 
+[Collection("IntegrationTests")]
 [Trait("Category", "Integration")]
-public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, IAsyncLifetime
+public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>
 {
     private readonly HttpClient _client;
     private readonly ITestOutputHelper _testOutputHelper;
@@ -133,15 +134,5 @@ public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, 
 
         var totalBalance = account1.Balance + account2.Balance;
         Assert.Equal(2000m, totalBalance);
-    }
-
-    public async Task InitializeAsync()
-    {
-        await InitializeAccountsAsync();
-    }
-
-    public Task DisposeAsync()
-    {
-        return Task.CompletedTask;
     }
 }

@@ -9,7 +9,7 @@ namespace AccountService.Controllers;
 [ApiController]
 [Route("health")]
 public class HealthController(
-    IRabbitMqHealthCheck rabbitMqHealth,
+    IRabbitMqHealthChecker rabbitMqHealth,
     IOutboxRepository outboxRepo,
     ILogger<HealthController> logger)
     : ControllerBase

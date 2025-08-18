@@ -1,6 +1,6 @@
 ﻿namespace AccountService.Application.Abstractions;
 
-public interface IRabbitMqHealthCheck
+public interface IRabbitMqHealthChecker
 {
     Task<bool> IsAliveAsync(CancellationToken cancellationToken = default);
 }

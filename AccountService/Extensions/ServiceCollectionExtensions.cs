@@ -204,7 +204,7 @@ public  static class ServiceCollectionExtensions
         services.AddScoped<IConsumerHandler, AntifraudConsumer>();
         services.AddScoped<IConsumerHandler, AuditConsumer>();
 
-        services.AddScoped<IRabbitMqHealthCheck, RabbitMqHealthCheck>();
+        services.AddScoped<IRabbitMqHealthChecker, RabbitMqHealthChecker>();
 
         services.AddHostedService<ConsumerHostedService>();
 

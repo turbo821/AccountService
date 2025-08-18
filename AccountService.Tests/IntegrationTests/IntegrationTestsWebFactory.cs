@@ -37,7 +37,7 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
         .WithImage("rabbitmq:4.1.3-management-alpine")
         .WithEnvironment("RABBITMQ_DEFAULT_USER", "guest")
         .WithEnvironment("RABBITMQ_DEFAULT_PASS", "guest")
-        .WithPortBinding(5672, true)
+        .WithPortBinding(5672)
         .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5672))
         .Build();
 
@@ -55,7 +55,7 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             UserName = "guest",
             Password = "guest"
         };
-
+        var port = _rabbitMqContainer.GetMappedPublicPort(5672);
         await using var connection = await factory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
 
@@ -116,6 +116,7 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
             services.AddAuthorization();
             services.AddRabbitMq(newConfig);
+            services.AddScoped<OutboxDispatcher>();
         });
     }
 
@@ -137,7 +138,6 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
         throw new Exception("Postgres did not become ready in time.");
     }
 
-
     private static void DeletePostgresqlServices(IServiceCollection services)
     {
         var descriptorDbConnection = services.SingleOrDefault(
@@ -152,12 +152,11 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
         foreach (var runner in fmServices)
             services.Remove(runner);
     }
-
     private static void DeleteHangfireServices(IServiceCollection services)
     {
         var hangfireServices = services
-            .Where(d => d.ServiceType.Namespace != null &&
-                        d.ServiceType.Namespace.StartsWith("Hangfire")).ToList();
+            .Where(d => d.ServiceType.FullName != null &&
+                        d.ServiceType.FullName.Contains("Hangfire")).ToList();
 
         foreach (var descriptor in hangfireServices)
             services.Remove(descriptor);
@@ -182,7 +181,7 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             services.Remove(descriptor);
 
         var healthCheckDescriptor = services
-            .SingleOrDefault(d => d.ServiceType == typeof(IRabbitMqHealthCheck));
+            .SingleOrDefault(d => d.ServiceType == typeof(IRabbitMqHealthChecker));
         if (healthCheckDescriptor != null)
             services.Remove(healthCheckDescriptor);
 
@@ -190,6 +189,17 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             .SingleOrDefault(d => d.ImplementationType == typeof(ConsumerHostedService));
         if (hostedServiceDescriptor != null)
             services.Remove(hostedServiceDescriptor);
+    }
+
+    public async Task StopRabbitMqAsync()
+    {
+        await _rabbitMqContainer.StopAsync();
+    }
+
+    public async Task StartRabbitMqAsync()
+    {
+        await _rabbitMqContainer.StartAsync();
+        var port = _rabbitMqContainer.GetMappedPublicPort(5672);
     }
 }
 

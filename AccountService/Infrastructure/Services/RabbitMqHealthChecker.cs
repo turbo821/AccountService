@@ -3,8 +3,8 @@ using RabbitMQ.Client;
 
 namespace AccountService.Infrastructure.Services;
 
-public class RabbitMqHealthCheck(IConnectionFactory connectionFactory, ILogger<RabbitMqHealthCheck> logger)
-    : IRabbitMqHealthCheck
+public class RabbitMqHealthChecker(IConnectionFactory connectionFactory, ILogger<RabbitMqHealthChecker> logger)
+    : IRabbitMqHealthChecker
 {
     public async Task<bool> IsAliveAsync(CancellationToken cancellationToken = default)
     {
