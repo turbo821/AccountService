@@ -36,7 +36,7 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     volumes:
-      - ./configurations/realm-export.json:/opt/keycloak/data/import/realm.json  
+      - ./configs/realm-export.json:/opt/keycloak/data/import/realm.json  
     ports:
       - 8080:8080
 
