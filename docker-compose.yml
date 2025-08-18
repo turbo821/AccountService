@@ -36,7 +36,7 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     volumes:
-      - ./configurations/realm-export.json:/opt/keycloak/data/import/realm.json  
+      - ./configs/realm-export.json:/opt/keycloak/data/import/realm.json  
     ports:
       - 8080:8080
 
@@ -48,7 +48,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: account_db
     volumes:
-      - ./containers/postgres_data:/var/lib/postgresql/data
+      - acc821_postgres_data:/var/lib/postgresql/data
     ports:
       - 5432
     healthcheck:
@@ -65,7 +65,7 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
-      - ./containers/rabbitmq_data:/var/lib/rabbitmq
+      - acc821_rabbitmq_data:/var/lib/rabbitmq
     ports:
       - 5672
       - 15672:15672
@@ -74,3 +74,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+volumes:
+    acc821_postgres_data:
+    acc821_rabbitmq_data:

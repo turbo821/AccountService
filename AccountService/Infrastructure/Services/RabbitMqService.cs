@@ -47,7 +47,7 @@ public class RabbitMqService(IConnectionFactory connectionFactory,
     /// <summary>
     /// Подписка на RabbitMQ для потребителя
     /// </summary>
-    public async Task Subscribe(string queue, Func<DomainEvent, string, Task> handler)
+    public async Task Subscribe(string queue, Func<string, string, Task> handler)
     {
         var channel = await _connection.CreateChannelAsync();
         _channels.Add(channel);
@@ -87,7 +87,7 @@ public class RabbitMqService(IConnectionFactory connectionFactory,
                     return;
                 }
 
-                await handler(domainEvent, type);
+                await handler(json, type);
 
                 await channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
             }

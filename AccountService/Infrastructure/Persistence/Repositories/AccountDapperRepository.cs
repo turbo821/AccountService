@@ -56,7 +56,6 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                SELECT id, currency, balance, is_frozen, xmin::text::bigint as Version 
                                             FROM accounts 
                                             WHERE id = @Id AND closed_at IS NULL
-                                            AND NOT is_frozen
                                             FOR UPDATE
             """;
         return await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = accountId }, transaction);
@@ -256,7 +255,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
     public async Task UpdateIsFrozen(Guid ownerId, bool isFrozen, IDbTransaction? transaction = null)
     {
         await connection.ExecuteAsync(
-            "UPDATE accounts SET frozen = @IsFrozen WHERE owner_id = @OwnerId AND closed_at IS NULL",
+            "UPDATE accounts SET is_frozen = @IsFrozen WHERE owner_id = @OwnerId",
             new { IsFrozen = isFrozen, OwnerId = ownerId }, transaction);
 
     }

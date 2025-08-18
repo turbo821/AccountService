@@ -6,13 +6,14 @@ namespace AccountService.Background;
 /// <summary>
 /// Сервис для распределения потребителей по очередям
 /// </summary>
-public class ConsumerHostedService(IServiceScopeFactory scopeFactory,
+public class ConsumersHostedService(IServiceScopeFactory scopeFactory,
     IBrokerService broker) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await SubscribeConsumer("account.antifraud", typeof(AntifraudConsumer));
+
         await SubscribeConsumer("account.audit", typeof(AuditConsumer));
+        await SubscribeConsumer("account.antifraud", typeof(AntifraudConsumer));
     }
 
     private async Task SubscribeConsumer(string queueName, Type consumerType)

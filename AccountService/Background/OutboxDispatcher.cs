@@ -20,7 +20,7 @@ public class OutboxDispatcher(IOutboxRepository repo,
             return;
         }
 
-        var messages = await repo.GetMessagesAsync();
+        var messages = await repo.GetMessagesAsync(100);
         logger.LogInformation("{Count} message(s) fetched from outbox", messages.Count);
 
         foreach (var msg in messages)

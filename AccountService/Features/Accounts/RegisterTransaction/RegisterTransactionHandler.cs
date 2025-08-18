@@ -26,7 +26,7 @@ public class RegisterTransactionHandler(IAccountRepository accRepo,
             var account = await accRepo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
 
             if (account == null)
-                throw new KeyNotFoundException($"Account with id {request.AccountId} not found or is frozen");
+                throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
 
             transaction = mapper.Map<Transaction>(request);
 
@@ -34,7 +34,7 @@ public class RegisterTransactionHandler(IAccountRepository accRepo,
 
             var updated = await accRepo.UpdateBalanceAsync(account, dbTransaction);
             if (updated == 0)
-                throw new DBConcurrencyException("Account was modified by another transaction");
+                throw new DBConcurrencyException("Account was modified by another transaction or frozen");
 
             await accRepo.AddTransactionAsync(transaction, dbTransaction);
 

@@ -1,4 +1,4 @@
-﻿namespace AccountService.Tests.IntegrationTests;
+﻿namespace AccountService.Tests.IntegrationTests.Common;
 
 [CollectionDefinition("IntegrationTests", DisableParallelization = true)]
 public class IntegrationTestCollection

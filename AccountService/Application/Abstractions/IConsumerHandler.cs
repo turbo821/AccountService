@@ -1,8 +1,6 @@
-﻿using AccountService.Application.Contracts;
-
-namespace AccountService.Application.Abstractions;
+﻿namespace AccountService.Application.Abstractions;
 
 public interface IConsumerHandler
 {
-    Task HandleAsync(DomainEvent @event, string eventType);
+    Task HandleAsync(string eventJson, string eventType);
 }

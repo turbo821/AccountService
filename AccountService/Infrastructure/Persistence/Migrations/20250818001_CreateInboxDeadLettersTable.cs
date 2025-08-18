@@ -9,7 +9,8 @@ public class CreateInboxDeadLettersTable : Migration
     public override void Up()
     {
         Create.Table("inbox_dead_letters")
-            .WithColumn("message_id").AsGuid().PrimaryKey()
+            .WithColumn("id").AsInt64().PrimaryKey().Identity()
+            .WithColumn("message_id").AsGuid()
             .WithColumn("received_at").AsDateTime().NotNullable()
             .WithColumn("type").AsString(200).NotNullable()
             .WithColumn("payload").AsCustom("JSONB").NotNullable()

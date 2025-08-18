@@ -32,7 +32,7 @@ public class OutboxDapperRepository(IDbConnection connection) : IOutboxRepositor
         }, transaction);
     }
 
-    public async Task<List<OutboxMessage>> GetMessagesAsync(int limit = 100)
+    public async Task<List<OutboxMessage>> GetMessagesAsync(int limit)
     {
         const string sql = 
             """

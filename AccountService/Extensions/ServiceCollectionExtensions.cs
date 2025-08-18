@@ -4,7 +4,6 @@ using AccountService.Background;
 using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using AccountService.Infrastructure.Consumers;
-using AccountService.Infrastructure.Persistence;
 using AccountService.Infrastructure.Persistence.Repositories;
 using AccountService.Infrastructure.Services;
 using FluentMigrator.Runner;
@@ -18,6 +17,7 @@ using Npgsql;
 using RabbitMQ.Client;
 using System.Data;
 using System.Reflection;
+using AccountService.Application;
 using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
 
 namespace AccountService.Extensions;
@@ -26,9 +26,12 @@ public  static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDatabase(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
     {
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
 
         services.AddScoped<IDbConnection>(_
             => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
@@ -73,8 +76,12 @@ public  static class ServiceCollectionExtensions
 
     public static IServiceCollection AddHangfireWithPostgres(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
     {
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
+
         services.AddHangfire(config =>
             config.UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
@@ -114,9 +121,34 @@ public  static class ServiceCollectionExtensions
     {
         services.AddSwaggerGen(options =>
         {
+            options.SwaggerDoc("v1", new OpenApiInfo { Title = "AccountService API", Version = "v1" });
+
+            //options.SwaggerDoc("events", new OpenApiInfo
+            //{
+            //    Title = "AccountService Events",
+            //    Version = "v1",
+            //    Description = "Контракты доменных событий"
+            //});
+
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             options.IncludeXmlComments(xmlPath);
+
+            // options.DocumentFilter<RabbitMQEventsDocumentFilter>();
+            //var eventTypes = Assembly.GetExecutingAssembly()
+            //    .GetTypes()
+            //    .Where(t => t.IsSubclassOf(typeof(DomainEvent)))
+            //    .ToArray();
+
+            //foreach (var type in eventTypes)
+            //{
+            //    options.MapType(type, () => new OpenApiSchema
+            //    {
+            //        Type = "object",
+            //        Description = $"Событие {type.Name}"
+            //    });
+            //}
+
 
             options.AddSecurityDefinition("Keycloak OAuth2.0", new OpenApiSecurityScheme
             {
@@ -186,8 +218,12 @@ public  static class ServiceCollectionExtensions
     }
 
     public static IServiceCollection AddRabbitMq(this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
     {
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
+
         services.AddSingleton<IConnectionFactory>(_ =>
             new ConnectionFactory
             {
@@ -206,7 +242,7 @@ public  static class ServiceCollectionExtensions
 
         services.AddScoped<IRabbitMqHealthChecker, RabbitMqHealthChecker>();
 
-        services.AddHostedService<ConsumerHostedService>();
+        services.AddHostedService<ConsumersHostedService>();
 
         return services;
     }

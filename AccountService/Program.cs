@@ -15,12 +15,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddHangfireWithPostgres(builder.Configuration);
+builder.Services.AddDatabase(builder.Configuration, builder.Environment);
+builder.Services.AddHangfireWithPostgres(builder.Configuration, builder.Environment);
 builder.Services.AddServices();
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddSwaggerGenWithAuth(builder.Configuration);
-builder.Services.AddRabbitMq(builder.Configuration);
+builder.Services.AddRabbitMq(builder.Configuration, builder.Environment);
 
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>

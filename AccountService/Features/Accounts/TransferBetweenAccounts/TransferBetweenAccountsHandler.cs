@@ -70,7 +70,7 @@ public class TransferBetweenAccountsHandler(IAccountRepository accRepo,
 
             if (updatedFrom == 0 || updatedTo == 0)
             {
-                throw new DBConcurrencyException("Account was modified by another transaction");
+                throw new DBConcurrencyException("Account was modified by another transaction or frozen");
             }
 
             var totalAfter = fromAccount.Balance + toAccount.Balance;
