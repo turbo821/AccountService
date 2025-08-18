@@ -3,13 +3,12 @@ using AccountService.Application.Contracts;
 using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Npgsql;
 using System.Data;
 using System.Data.Common;
 
-namespace AccountService.Infrastructure.Persistence;
+namespace AccountService.Infrastructure.Persistence.Repositories;
 
-public class InboxRepository(IDbConnection connection) : IInboxRepository
+public class InboxDapperRepository(IDbConnection connection) : IInboxRepository
 {
     public async Task<bool> IsProcessedAsync(Guid messageId, string handler, IDbTransaction? transaction = null)
     {
@@ -49,7 +48,7 @@ public class InboxRepository(IDbConnection connection) : IInboxRepository
         );
     }
 
-    public async Task AddAuditAsync(DomainEvent @event, IDbTransaction? transaction = null)
+    public async Task AddAuditAsync(DomainEvent @event, string eventType, IDbTransaction? transaction = null)
     {
         const string sql = 
             """
@@ -60,7 +59,7 @@ public class InboxRepository(IDbConnection connection) : IInboxRepository
         await connection.ExecuteAsync(sql, new
         {
             Id = @event.EventId,
-            Type = @event.GetType().Name,
+            Type = eventType,
             Payload = JsonConvert.SerializeObject(@event, new JsonSerializerSettings
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
@@ -80,4 +79,22 @@ public class InboxRepository(IDbConnection connection) : IInboxRepository
         return await conn.BeginTransactionAsync(isolationLevel);
     }
 
+    public async Task AddDearLetterAsync(Guid messageId, string type, string payload, string error,
+        IDbTransaction? transaction = null)
+    {
+        const string sql = 
+            """
+               INSERT INTO inbox_dead_letters (message_id, received_at, type, payload, error)
+               VALUES (@MessageId, @ReceivedAt, @Type, @Payload::jsonb, @Error);
+            """;
+
+        await connection.ExecuteAsync(sql, new
+        {
+            MessageId = messageId,
+            ReceivedAt = DateTime.UtcNow,
+            Type = type,
+            Payload = payload,
+            Error = error
+        }, transaction);
+    }
 }

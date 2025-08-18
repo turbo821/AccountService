@@ -10,6 +10,7 @@ public class OutboxMessage
     public required string Payload { get; set; }
     public required string Exchange { get; set; }
     public required string RoutingKey { get; set; }
+    public bool IsDeadLetter { get; set; }
     public DateTime? OccurredAt { get; set; }
     public DateTime? ProcessedAt { get; set; }
 }

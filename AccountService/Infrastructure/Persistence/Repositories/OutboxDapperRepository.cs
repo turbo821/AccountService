@@ -6,9 +6,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Data;
 
-namespace AccountService.Infrastructure.Persistence;
+namespace AccountService.Infrastructure.Persistence.Repositories;
 
-public class OutboxRepository(IDbConnection connection) : IOutboxRepository
+public class OutboxDapperRepository(IDbConnection connection) : IOutboxRepository
 {
     public async Task AddAsync(DomainEvent @event, string exchange, string routingKey, IDbTransaction? transaction = null)
     {
@@ -34,7 +34,13 @@ public class OutboxRepository(IDbConnection connection) : IOutboxRepository
 
     public async Task<List<OutboxMessage>> GetMessagesAsync(int limit = 100)
     {
-        const string sql = "SELECT * FROM outbox_messages WHERE processed_at is NULL ORDER BY occurred_at LIMIT @Limit";
+        const string sql = 
+            """
+                SELECT * FROM outbox_messages
+                WHERE processed_at is NULL AND NOT is_dead_letter
+                ORDER BY occurred_at LIMIT @Limit
+            """
+        ;
 
         return (await connection.QueryAsync<OutboxMessage>(sql, new { Limit = limit })).ToList();
     }
@@ -48,7 +54,19 @@ public class OutboxRepository(IDbConnection connection) : IOutboxRepository
 
     public async Task<int> GetPendingCountAsync()
     {
-        const string sql = "SELECT COUNT(*) FROM outbox_messages WHERE processed_at IS NULL";
+        const string sql = "SELECT COUNT(*) FROM outbox_messages WHERE processed_at IS NULL AND NOT is_dead_letter";
         return await connection.ExecuteScalarAsync<int>(sql);
+    }
+
+    public async Task MarkDeadLetterAsync(Guid messageId)
+    {
+        const string sql =
+            """
+            UPDATE outbox_messages
+            SET is_dead_letter = TRUE
+            WHERE id = @Id
+            """;
+
+        await connection.ExecuteAsync(sql, new { Id = messageId });
     }
 }

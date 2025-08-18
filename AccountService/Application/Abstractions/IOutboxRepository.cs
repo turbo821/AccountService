@@ -10,5 +10,6 @@ public interface IOutboxRepository
     Task<List<OutboxMessage>> GetMessagesAsync(int limit = 100);
     Task MarkProcessedAsync(Guid id);
     Task<int> GetPendingCountAsync();
+    Task MarkDeadLetterAsync(Guid messageId);
 
 }

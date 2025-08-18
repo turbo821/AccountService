@@ -2,6 +2,7 @@
 using FluentMigrator.Runner;
 using Hangfire;
 using Hangfire.Dashboard;
+using RabbitMQ.Client;
 
 namespace AccountService.Extensions;
 
@@ -60,14 +61,54 @@ public static class WebApplicationExtensions
             s => s.AccrueDailyInterestAsync(),
             Cron.Daily
         );
-        RecurringJob.AddOrUpdate<OutboxProcessor>(
+        RecurringJob.AddOrUpdate<OutboxDispatcher>(
             "outbox-processor",
             processor => processor.ProcessOutboxMessages(),
-            Cron.Minutely);
-            
+            "*/10 * * * * *"); 
+
         return app;
     }
+
+    public static async Task InitializeRabbitMqAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IConnectionFactory>();
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        await channel.ExchangeDeclareAsync(
+            exchange: "account.events",
+            type: ExchangeType.Topic,
+            durable: true,
+            autoDelete: false
+        );
+
+        var queues = new[]
+        {
+            "account.crm",
+            "account.notifications",
+            "account.antifraud",
+            "account.audit"
+        };
+
+        foreach (var queue in queues)
+        {
+            await channel.QueueDeclareAsync(
+                queue: queue,
+                durable: true,
+                exclusive: false,
+                autoDelete: false
+            );
+        }
+
+        await channel.QueueBindAsync("account.crm", "account.events", "account.*");
+        await channel.QueueBindAsync("account.notifications", "account.events", "money.*");
+        await channel.QueueBindAsync("account.antifraud", "account.events", "client.*");
+        await channel.QueueBindAsync("account.audit", "account.events", "#");
+    }
 }
+
 
 public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
 {

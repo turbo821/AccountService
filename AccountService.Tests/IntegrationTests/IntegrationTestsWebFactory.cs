@@ -1,4 +1,7 @@
-﻿using DotNet.Testcontainers.Builders;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Background;
+using AccountService.Extensions;
+using DotNet.Testcontainers.Builders;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -7,12 +10,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using RabbitMQ.Client;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using AccountService.Extensions;
 using Testcontainers.PostgreSql;
+using Testcontainers.RabbitMq;
+using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
 
 namespace AccountService.Tests.IntegrationTests;
 
@@ -28,50 +33,80 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             .UntilCommandIsCompleted("pg_isready -U postgres"))
         .Build();
 
+    private readonly RabbitMqContainer _rabbitMqContainer = new RabbitMqBuilder()
+        .WithImage("rabbitmq:4.1.3-management-alpine")
+        .WithEnvironment("RABBITMQ_DEFAULT_USER", "guest")
+        .WithEnvironment("RABBITMQ_DEFAULT_PASS", "guest")
+        .WithPortBinding(5672, true)
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5672))
+        .Build();
+
     public async Task InitializeAsync()
     {
         await _postgresContainer.StartAsync();
+        await _rabbitMqContainer.StartAsync();
 
         await WaitForPostgresReady(_postgresContainer.GetConnectionString());
+
+        var factory = new ConnectionFactory
+        {
+            HostName = _rabbitMqContainer.Hostname,
+            Port = _rabbitMqContainer.GetMappedPublicPort(5672),
+            UserName = "guest",
+            Password = "guest"
+        };
+
+        await using var connection = await factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+
+        // Exchange
+        await channel.ExchangeDeclareAsync("account.events", ExchangeType.Topic, durable: true);
+
+        // Очереди
+        var queues = new[]
+        {
+            "account.crm",
+            "account.notifications",
+            "account.antifraud",
+            "account.audit"
+        };
+
+        foreach (var queue in queues)
+            await channel.QueueDeclareAsync(queue, durable: true, exclusive: false, autoDelete: false);
+
+        // Bindings
+        await channel.QueueBindAsync("account.crm", "account.events", "account.*");
+        await channel.QueueBindAsync("account.notifications", "account.events", "money.*");
+        await channel.QueueBindAsync("account.antifraud", "account.events", "client.*");
+        await channel.QueueBindAsync("account.audit", "account.events", "#");
     }
 
     public new async Task DisposeAsync()
     {
+        await _rabbitMqContainer.DisposeAsync();
         await _postgresContainer.DisposeAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var testConnectionString = _postgresContainer.GetConnectionString();
+        var rabbitHostName = _rabbitMqContainer.Hostname;
+        var rabbitPort = _rabbitMqContainer.GetMappedPublicPort(5672);
 
         builder.ConfigureServices(services =>
         {
-            var descriptorDbConnection = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IDbConnection));
-            if (descriptorDbConnection != null)
-                services.Remove(descriptorDbConnection);
-
-            var fmServices = services
-                .Where(d =>
-                    d.ServiceType.FullName != null && d.ServiceType.FullName.Contains("FluentMigrator")).ToList();
-
-            if (fmServices.Count != 0)
-            {
-                foreach (var runner in fmServices)
-                    services.Remove(runner);
-            }
-
-            var hangfireServices = services
-                .Where(d => d.ServiceType.Namespace != null && 
-                            d.ServiceType.Namespace.StartsWith("Hangfire")).ToList();
-
-            foreach (var descriptor in hangfireServices)
-                services.Remove(descriptor);
+            DeletePostgresqlServices(services);
+            DeleteHangfireServices(services);
+            DeleteRabbitMqServices(services);
 
             var newConfig = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:DefaultConnection"] = testConnectionString
+                    ["ConnectionStrings:DefaultConnection"] = testConnectionString,
+                    ["RabbitMQ:Host"] = rabbitHostName,
+                    ["RabbitMQ:Port"] = rabbitPort.ToString(),
+                    ["RabbitMQ:Username"] = "guest",
+                    ["RabbitMQ:Password"] = "guest"
                 })
                 .Build();
 
@@ -79,8 +114,8 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             services.AddHangfireWithPostgres(newConfig);
             services.AddAuthentication("TestScheme")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
-
             services.AddAuthorization();
+            services.AddRabbitMq(newConfig);
         });
     }
 
@@ -100,6 +135,61 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             }
         }
         throw new Exception("Postgres did not become ready in time.");
+    }
+
+
+    private static void DeletePostgresqlServices(IServiceCollection services)
+    {
+        var descriptorDbConnection = services.SingleOrDefault(
+            d => d.ServiceType == typeof(IDbConnection));
+        if (descriptorDbConnection != null)
+            services.Remove(descriptorDbConnection);
+
+        var fmServices = services
+            .Where(d =>
+                d.ServiceType.FullName != null && d.ServiceType.FullName.Contains("FluentMigrator")).ToList();
+        if (fmServices.Count == 0) return;
+        foreach (var runner in fmServices)
+            services.Remove(runner);
+    }
+
+    private static void DeleteHangfireServices(IServiceCollection services)
+    {
+        var hangfireServices = services
+            .Where(d => d.ServiceType.Namespace != null &&
+                        d.ServiceType.Namespace.StartsWith("Hangfire")).ToList();
+
+        foreach (var descriptor in hangfireServices)
+            services.Remove(descriptor);
+    }
+
+    private static void DeleteRabbitMqServices(IServiceCollection services)
+    {
+
+        var descriptorRabbitMq = services.SingleOrDefault(d => d.ServiceType == typeof(IConnectionFactory));
+        if (descriptorRabbitMq != null)
+            services.Remove(descriptorRabbitMq);
+
+        var brokerServiceDescriptor = services.SingleOrDefault(
+            d => d.ServiceType == typeof(IBrokerService));
+        if (brokerServiceDescriptor != null)
+            services.Remove(brokerServiceDescriptor);
+
+        var consumerHandlers = services
+            .Where(d => d.ServiceType == typeof(IConsumerHandler))
+            .ToList();
+        foreach (var descriptor in consumerHandlers)
+            services.Remove(descriptor);
+
+        var healthCheckDescriptor = services
+            .SingleOrDefault(d => d.ServiceType == typeof(IRabbitMqHealthCheck));
+        if (healthCheckDescriptor != null)
+            services.Remove(healthCheckDescriptor);
+
+        var hostedServiceDescriptor = services
+            .SingleOrDefault(d => d.ImplementationType == typeof(ConsumerHostedService));
+        if (hostedServiceDescriptor != null)
+            services.Remove(hostedServiceDescriptor);
     }
 }
 

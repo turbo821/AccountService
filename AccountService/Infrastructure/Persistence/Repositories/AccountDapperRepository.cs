@@ -4,7 +4,7 @@ using Dapper;
 using System.Data;
 using System.Data.Common;
 
-namespace AccountService.Infrastructure.Persistence;
+namespace AccountService.Infrastructure.Persistence.Repositories;
 
 public class AccountDapperRepository(IDbConnection connection) : IAccountRepository
 {

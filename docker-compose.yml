@@ -26,8 +26,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      keycloak:
-        condition: service_started
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.2  
@@ -66,10 +64,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbitmq_management load_definitions "/opt/definitions.json"
     volumes:
       - ./containers/rabbitmq_data:/var/lib/rabbitmq
-      - ./configurations/definitions.json:/opt/definitions.json
     ports:
       - 5672
       - 15672:15672

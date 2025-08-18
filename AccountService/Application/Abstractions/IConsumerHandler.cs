@@ -1,6 +1,8 @@
-﻿namespace AccountService.Application.Abstractions;
+﻿using AccountService.Application.Contracts;
+
+namespace AccountService.Application.Abstractions;
 
 public interface IConsumerHandler
 {
-    Task HandleAsync(byte[] body);
+    Task HandleAsync(DomainEvent @event, string eventType);
 }

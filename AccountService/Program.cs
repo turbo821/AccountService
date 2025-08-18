@@ -31,7 +31,7 @@ builder.Services.AddControllers()
 var app = builder.Build();
 
 app.RunMigrations();
-
+await app.InitializeRabbitMqAsync();
 app.UseHangfire();
 
 app.UseCors("AllowAll");

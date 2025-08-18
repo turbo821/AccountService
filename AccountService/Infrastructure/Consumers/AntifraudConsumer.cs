@@ -1,9 +1,6 @@
 ﻿using AccountService.Application.Abstractions;
 using AccountService.Application.Contracts;
 using AccountService.Features.Accounts.Contracts;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System.Text;
 using AccountService.Features.Accounts.Abstractions;
 
 namespace AccountService.Infrastructure.Consumers
@@ -14,28 +11,19 @@ namespace AccountService.Infrastructure.Consumers
         ILogger<AntifraudConsumer> logger)
         : IConsumerHandler
     {
-        public async Task HandleAsync(byte[] body)
+        public async Task HandleAsync(DomainEvent @event, string eventType)
         {
-            var json = Encoding.UTF8.GetString(body);
-            var baseEvent = JsonConvert.DeserializeObject<DomainEvent>(json, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.Auto,
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            });
-
-            if (baseEvent is null) return;
-
-            var isProcessed = await inboxRepo.IsProcessedAsync(baseEvent.EventId, nameof(AuditConsumer));
+            var isProcessed = await inboxRepo.IsProcessedAsync(@event.EventId, nameof(AntifraudConsumer));
             if (isProcessed)
             {
-                logger.LogInformation("Event {EventId} already processed by {ConsumerName}, skipping", baseEvent.EventId, nameof(AuditConsumer));
+                logger.LogInformation("Event {EventId} already processed by {ConsumerName}, skipping", @event.EventId, nameof(AntifraudConsumer));
                 return;
             }
 
             await using var transaction = await accRepo.BeginTransactionAsync();
             try
             {
-                switch (baseEvent)
+                switch (@event)
                 {
                     case ClientBlocked blocked:
                         await accRepo.UpdateIsFrozen(blocked.ClientId, true, transaction);
@@ -47,17 +35,18 @@ namespace AccountService.Infrastructure.Consumers
                         logger.LogInformation("ClientUnblocked processed for client {ClientId}", unblocked.ClientId);
                         break;
                     default:
-                        logger.LogWarning("Unknown event type: {Type}", baseEvent.GetType().Name);
+                        logger.LogWarning("Unknown event eventType: {Type}", @event.GetType().Name);
                         break;
                 }
-                await inboxRepo.MarkAsProcessedAsync(baseEvent.EventId, nameof(AntifraudConsumer), transaction);
+                await inboxRepo.MarkAsProcessedAsync(@event.EventId, nameof(AntifraudConsumer), transaction);
 
                 await transaction.CommitAsync();
+                logger.LogInformation("Antifraud event {EventId} processed by {ConsumerName}", @event.EventId, nameof(AntifraudConsumer));
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                logger.LogError(ex, "Error processing event {EventId}", baseEvent.EventId);
+                logger.LogError(ex, "Error processing event {EventId}", @event.EventId);
                 throw;
             }
         }
