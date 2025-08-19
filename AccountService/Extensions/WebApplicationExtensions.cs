@@ -77,7 +77,7 @@ public static class WebApplicationExtensions
             RecurringJob.AddOrUpdate<OutboxDispatcher>(
                 "outbox-processor",
                 processor => processor.ProcessOutboxMessages(),
-                "*/10 * * * * *");
+                "*/20 * * * * *");
             
             app.Logger.LogInformation("Hangfire successfully configured.");
         }

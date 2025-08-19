@@ -1,4 +1,5 @@
-﻿using AccountService.Application.Abstractions;
+﻿using System.Diagnostics;
+using AccountService.Application.Abstractions;
 using AccountService.Application.Contracts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -58,6 +59,7 @@ public class RabbitMqService(IConnectionFactory connectionFactory,
 
         consumer.ReceivedAsync += async (_, ea) =>
         {
+            var sw = Stopwatch.StartNew();
             using var scope = scopeFactory.CreateScope();
             var inboxRepo = scope.ServiceProvider.GetRequiredService<IInboxRepository>();
 
@@ -78,6 +80,13 @@ public class RabbitMqService(IConnectionFactory connectionFactory,
                 if (domainEvent is null)
                     throw new Exception("Event is not serialized to DomainEvent");
 
+                logger.LogInformation(
+                    "Received event {@Event} correlationId {CorrelationId} eventId {EventId}",
+                    type,
+                    domainEvent.Meta?.CorrelationId,
+                    domainEvent.EventId
+                );
+
                 if (domainEvent.Meta?.Version != "v1")
                 {
                     await inboxRepo.AddDearLetterAsync(domainEvent.EventId,  type, json, $"Unsupported version: {domainEvent.Meta?.Version}");
@@ -89,16 +98,34 @@ public class RabbitMqService(IConnectionFactory connectionFactory,
 
                 await handler(json, type);
 
+                sw.Stop();
+                logger.LogInformation(
+                    "Processed event {@Event} correlationId {CorrelationId} eventId {EventId} in {Latency}ms",
+                    type,
+                    domainEvent.Meta?.CorrelationId,
+                    domainEvent.EventId,
+                    sw.ElapsedMilliseconds
+                );
+
                 await channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
             }
             catch (Exception ex)
             {
+                sw.Stop();
                 if (domainEvent != null)
                 {
                     await inboxRepo.AddDearLetterAsync(domainEvent.EventId, type, json, ex.Message);
                 }
 
-                logger.LogError(ex, "Error processing message {Queue}", queue);
+                logger.LogError(
+                    ex,
+                    "Error processing event {@Event} correlationId {CorrelationId} eventId {EventId} latency {Latency}ms",
+                    type,
+                    domainEvent?.Meta?.CorrelationId,
+                    domainEvent?.EventId,
+                    sw.ElapsedMilliseconds
+                );
+
                 await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
             }
         };

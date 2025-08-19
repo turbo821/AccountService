@@ -46,6 +46,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<HttpLoggingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
