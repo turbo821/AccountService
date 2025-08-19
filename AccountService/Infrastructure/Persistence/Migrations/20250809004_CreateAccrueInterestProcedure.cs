@@ -20,6 +20,7 @@ public class CreateAccrueInterestProcedure : Migration
                 FROM accounts 
                 WHERE id = account_id AND type = 1 -- AccountType.Deposit
                 AND closed_at IS NULL
+                AND NOT is_frozen
                 FOR UPDATE;
                 
                 IF deposit_account IS NULL THEN
@@ -42,7 +43,7 @@ public class CreateAccrueInterestProcedure : Migration
                      account_id, 
                      interest_amount, 
                      deposit_account.currency, 
-                     0, -- TransactionType.Debit
+                     0, -- TransactionType.Credit
                      'Daily interest accrual', 
                      now());
                 

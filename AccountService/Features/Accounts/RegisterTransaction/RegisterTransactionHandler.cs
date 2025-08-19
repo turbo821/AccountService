@@ -1,12 +1,16 @@
-﻿using AccountService.Application.Models;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
+using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 using MediatR;
 using System.Data;
+using AccountService.Application.Contracts;
 
 namespace AccountService.Features.Accounts.RegisterTransaction;
 
-public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
+public class RegisterTransactionHandler(IAccountRepository accRepo, 
+    IOutboxRepository outboxRepo, IMapper mapper,
     ICurrencyValidator currencyValidator) : IRequestHandler<RegisterTransactionCommand, MbResult<TransactionIdDto>>
 {
     public async Task<MbResult<TransactionIdDto>> Handle(RegisterTransactionCommand request, CancellationToken cancellationToken)
@@ -16,10 +20,10 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 
         Transaction transaction;
 
-        using var dbTransaction = await repo.BeginTransaction();
+        await using var dbTransaction = await accRepo.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
-            var account = await repo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
+            var account = await accRepo.GetByIdForUpdateAsync(request.AccountId, dbTransaction);
 
             if (account == null)
                 throw new KeyNotFoundException($"Account with id {request.AccountId} not found");
@@ -28,17 +32,37 @@ public class RegisterTransactionHandler(IAccountRepository repo, IMapper mapper,
 
             account.ConductTransaction(transaction);
 
-            var updated = await repo.UpdateBalanceAsync(account, dbTransaction);
+            var updated = await accRepo.UpdateBalanceAsync(account, dbTransaction);
             if (updated == 0)
-                throw new DBConcurrencyException("Account was modified by another transaction");
+                throw new DBConcurrencyException("Account was modified by another transaction or frozen");
 
-            await repo.AddTransactionAsync(transaction, dbTransaction);
+            await accRepo.AddTransactionAsync(transaction, dbTransaction);
 
-            dbTransaction.Commit();
+            if (request.Type == TransactionType.Credit)
+            {
+                var @event = mapper.Map<MoneyCredited>(transaction);
+                @event.Meta = new EventMeta(
+                    "account-service",
+                    Guid.NewGuid(), @event.EventId
+                );
+                await outboxRepo.AddAsync(@event, "account.events", "money.credited", dbTransaction);
+            }
+            else
+            {
+                var @event = mapper.Map<MoneyDebited>(transaction);
+                @event.Meta = new EventMeta(
+                    "account-service",
+                    Guid.NewGuid(), @event.EventId
+                );
+
+                await outboxRepo.AddAsync(@event, "account.events", "money.debited", dbTransaction);
+            }
+
+            await dbTransaction.CommitAsync(cancellationToken);
         }
         catch
         {
-            dbTransaction.Rollback();
+            await dbTransaction.RollbackAsync(cancellationToken);
             throw;
         }
 

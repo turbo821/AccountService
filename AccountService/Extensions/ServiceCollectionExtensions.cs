@@ -1,19 +1,23 @@
 ﻿using AccountService.Application.Abstractions;
 using AccountService.Application.Behaviors;
+using AccountService.Background;
 using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
-using AccountService.Infrastructure.Persistence;
+using AccountService.Infrastructure.Consumers;
+using AccountService.Infrastructure.Persistence.Repositories;
 using AccountService.Infrastructure.Services;
 using FluentMigrator.Runner;
 using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
+using RabbitMQ.Client;
 using System.Data;
 using System.Reflection;
-using Hangfire;
-using Hangfire.PostgreSql;
-using Npgsql;
+using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
 
 namespace AccountService.Extensions;
 
@@ -21,9 +25,12 @@ public  static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDatabase(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
     {
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
 
         services.AddScoped<IDbConnection>(_
             => new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
@@ -42,6 +49,8 @@ public  static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         services.AddScoped<IAccountRepository, AccountDapperRepository>();
+        services.AddScoped<IOutboxRepository, OutboxDapperRepository>();
+        services.AddScoped<IInboxRepository, InboxDapperRepository>();
 
         services.AddMediatR(cfg =>
         {
@@ -61,16 +70,17 @@ public  static class ServiceCollectionExtensions
 
         services.AddHttpClient();
         services.AddScoped<IAuthService, AuthService>();
-
-        services.AddScoped<IInterestAccrualService, InterestAccrualService>();
-
         return services;
     }
 
     public static IServiceCollection AddHangfireWithPostgres(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
     {
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
+
         services.AddHangfire(config =>
             config.UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
@@ -81,6 +91,7 @@ public  static class ServiceCollectionExtensions
         services.AddHangfireServer();
         return services;
     }
+
     public static IServiceCollection AddAuth(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -100,7 +111,6 @@ public  static class ServiceCollectionExtensions
                 };
             });
 
-        // services.AddHangfire()
         return services;
     }
 
@@ -110,6 +120,9 @@ public  static class ServiceCollectionExtensions
     {
         services.AddSwaggerGen(options =>
         {
+            options.SwaggerDoc("v1", new OpenApiInfo { Title = "AccountService API", Version = "v1" });
+            options.SwaggerDoc("events", new OpenApiInfo { Title = "Domain Events", Version = "v1" });
+
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             options.IncludeXmlComments(xmlPath);
@@ -177,6 +190,36 @@ public  static class ServiceCollectionExtensions
         
             options.AddSecurityRequirement(securityRequirement);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddRabbitMq(this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment? env = null)
+    {
+        if (env != null && env.IsEnvironment("IntegrationTests"))
+            return services;
+
+        services.AddSingleton<IConnectionFactory>(_ =>
+            new ConnectionFactory
+            {
+                HostName = configuration["RabbitMQ:Host"]!,
+                Port = configuration["RabbitMQ:Port"] != null
+                    ? int.Parse(configuration["RabbitMQ:Port"]!)
+                    : AmqpTcpEndpoint.UseDefaultPort,
+                UserName = configuration["RabbitMQ:Username"]!,
+                Password = configuration["RabbitMQ:Password"]!
+            });
+
+        services.AddSingleton<IBrokerService, RabbitMqService>();
+
+        services.AddScoped<IConsumerHandler, AntifraudConsumer>();
+        services.AddScoped<IConsumerHandler, AuditConsumer>();
+
+        services.AddScoped<IRabbitMqHealthChecker, RabbitMqHealthChecker>();
+
+        services.AddHostedService<ConsumersHostedService>();
 
         return services;
     }

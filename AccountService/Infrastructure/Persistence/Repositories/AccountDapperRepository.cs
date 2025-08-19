@@ -1,27 +1,30 @@
 ﻿using AccountService.Features.Accounts;
 using AccountService.Features.Accounts.Abstractions;
 using Dapper;
-using Npgsql;
 using System.Data;
+using System.Data.Common;
 
-namespace AccountService.Infrastructure.Persistence;
+namespace AccountService.Infrastructure.Persistence.Repositories;
 
 public class AccountDapperRepository(IDbConnection connection) : IAccountRepository
 {
-    public async Task<List<Account>> GetAllAsync(Guid? ownerId)
+    public async Task<List<Account>> GetAllAsync(Guid? ownerId, AccountType? type = null)
     {
-        const string sql = 
+        const string sql =
             """
                    SELECT * FROM accounts 
                    WHERE closed_at IS NULL
                    AND (@OwnerId IS NULL OR owner_id = @OwnerId)
+                   AND (@Type IS NULL OR type = @Type)
             """;
 
-        var accounts = (await connection.QueryAsync<Account>(sql, new { OwnerId = ownerId })).ToList();
+        var accounts = (await connection.QueryAsync<Account>(sql,
+            new { OwnerId = ownerId, Type = type })).ToList();
+
         return accounts;
     }
 
-    public async Task<Account?> GetByIdAsync(Guid id)
+    public async Task<Account?> GetByIdAsync(Guid id, IDbTransaction? transaction = null)
     {
         const string sql = 
             // ReSharper disable once StringLiteralTypo
@@ -35,12 +38,13 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                     interest_rate,
                     opened_at,
                     closed_at,
+                    is_frozen,
                     xmin::text::bigint AS Version
                 FROM accounts 
                 WHERE id = @Id AND closed_at IS NULL
             """;
 
-        var account = await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = id });
+        var account = await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = id }, transaction);
         return account;
     }
 
@@ -49,9 +53,9 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         const string sql =
             // ReSharper disable once StringLiteralTypo
             """
-               SELECT id, currency, balance, xmin::text::bigint as Version 
+               SELECT id, currency, balance, is_frozen, xmin::text::bigint as Version 
                                             FROM accounts 
-                                            WHERE id = @Id 
+                                            WHERE id = @Id AND closed_at IS NULL
                                             FOR UPDATE
             """;
         return await connection.QuerySingleOrDefaultAsync<Account>(sql, new { Id = accountId }, transaction);
@@ -94,29 +98,29 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
 
     }
 
-    public async Task AddAsync(Account account)
+    public async Task AddAsync(Account account, IDbTransaction? transaction = null)
     {
-        const string sql = 
-            """
-               INSERT INTO accounts 
-                   (id, owner_id, type, currency, balance, interest_rate, opened_at)
-               VALUES 
-                   (@Id, @OwnerId, @Type, @Currency, @Balance, @InterestRate, @OpenedAt)
-            """;
+            const string insertAccountSql = 
+                """
+                    INSERT INTO accounts 
+                        (id, owner_id, type, currency, balance, interest_rate, opened_at)
+                    VALUES 
+                        (@Id, @OwnerId, @Type, @Currency, @Balance, @InterestRate, @OpenedAt)
+                """;
 
-        await connection.ExecuteAsync(sql, new
-        {
-            account.Id,
-            account.OwnerId,
-            Type = (int)account.Type,
-            account.Currency,
-            account.Balance,
-            account.InterestRate,
-            account.OpenedAt
-        });
+            await connection.ExecuteAsync(insertAccountSql, new
+            {
+                account.Id,
+                account.OwnerId,
+                Type = (int)account.Type,
+                account.Currency,
+                account.Balance,
+                account.InterestRate,
+                account.OpenedAt
+            }, transaction);
     }
 
-    public async Task<int> UpdateAsync(Account account)
+    public async Task<int> UpdateAsync(Account account, IDbTransaction? transaction = null)
     {
         const string sql =
             // ReSharper disable once StringLiteralTypo
@@ -128,7 +132,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
                    balance = @Balance,
                    interest_rate = @InterestRate,
                    opened_at=@OpenedAt
-               WHERE id = @Id AND closed_at IS NULL 
+               WHERE id = @Id AND closed_at IS NULL
                AND xmin::text::bigint = @Version
             """;
 
@@ -142,7 +146,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             account.InterestRate,
             account.OpenedAt,
             account.Version
-        });
+        }, transaction);
     }
 
     public async Task<int> UpdateBalanceAsync(Account account, IDbTransaction? transaction = null)
@@ -151,9 +155,10 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             // ReSharper disable once StringLiteralTypo
             """
               UPDATE accounts SET
-                  balance = @Balance
+                balance = @Balance
               WHERE id = @Id AND closed_at IS NULL
-              AND xmin::text::bigint = @Version
+                AND NOT is_frozen
+                AND xmin::text::bigint = @Version
             """;
 
         return await connection.ExecuteAsync(sql, new
@@ -164,7 +169,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         }, transaction);
     }
 
-    public async Task<int> UpdateInterestRateAsync(Account account)
+    public async Task<int> UpdateInterestRateAsync(Account account, IDbTransaction? transaction = null)
     {
         const string sql =
             // ReSharper disable once StringLiteralTypo
@@ -180,10 +185,10 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
             account.Id,
             account.InterestRate,
             account.Version
-        });
+        }, transaction);
     }
 
-    public async Task<Guid?> SoftDeleteAsync(Guid accountId)
+    public async Task<Guid?> SoftDeleteAsync(Guid accountId, IDbTransaction? transaction = null)
     {
         const string sql = 
             """
@@ -197,7 +202,7 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         {
             Id = accountId,
             ClosedAt = DateTime.UtcNow
-        });
+        }, transaction);
     }
 
     public async Task AddTransactionAsync(Transaction transaction, IDbTransaction? dbTransaction = null)
@@ -223,22 +228,35 @@ public class AccountDapperRepository(IDbConnection connection) : IAccountReposit
         }, dbTransaction);
     }
 
-    public async Task AccrueInterestForAllAsync(IDbTransaction? transaction = null)
+    public async Task<decimal> AccrueInterestByIdAsync(Guid accountId, IDbTransaction? transaction = null)
     {
-        await connection.ExecuteAsync(
-            "SELECT accrue_interest_all()",
+        const string sql = "SELECT accrue_interest(@AccountId);";
+
+        var result = await connection.ExecuteScalarAsync<decimal>(
+            sql,
+            new { AccountId = accountId },
             transaction: transaction
         );
+
+        return result;
     }
 
-    public async Task<IDbTransaction> BeginTransaction()
+    public async Task<DbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
-        if (connection is not NpgsqlConnection conn)
-            throw new InvalidOperationException("Connection must be NpgsqlConnection");
+        if (connection is not DbConnection conn)
+            throw new InvalidOperationException("Connection must be DbConnection");
 
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
 
-        return await conn.BeginTransactionAsync(IsolationLevel.Serializable);
+        return await conn.BeginTransactionAsync(isolationLevel);
+    }
+
+    public async Task UpdateIsFrozen(Guid ownerId, bool isFrozen, IDbTransaction? transaction = null)
+    {
+        await connection.ExecuteAsync(
+            "UPDATE accounts SET is_frozen = @IsFrozen WHERE owner_id = @OwnerId",
+            new { IsFrozen = isFrozen, OwnerId = ownerId }, transaction);
+
     }
 }

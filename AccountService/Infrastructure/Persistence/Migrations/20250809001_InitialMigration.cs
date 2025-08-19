@@ -18,7 +18,8 @@ public class InitialMigration : Migration
             .WithColumn("balance").AsDecimal().NotNullable()
             .WithColumn("interest_rate").AsDecimal().Nullable()
             .WithColumn("opened_at").AsDateTime().NotNullable().WithDefaultValue(SystemMethods.CurrentUTCDateTime)
-            .WithColumn("closed_at").AsDateTime().Nullable();
+            .WithColumn("closed_at").AsDateTime().Nullable()
+            .WithColumn("is_frozen").AsBoolean().NotNullable().WithDefaultValue(false);
 
         Create.Table("transactions")
             .WithColumn("id").AsGuid().PrimaryKey()

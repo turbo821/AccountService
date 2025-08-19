@@ -1,82 +1,84 @@
-﻿using AccountService.Features.Accounts;
+﻿using AccountService.Background;
+using AccountService.Extensions;
 using DotNet.Testcontainers.Builders;
-using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Testcontainers.PostgreSql;
+using Testcontainers.RabbitMq;
 
-namespace AccountService.Tests.IntegrationTests;
+namespace AccountService.Tests.IntegrationTests.Common;
 
 public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     [SuppressMessage("ReSharper", "StringLiteralTypo")]
     private readonly PostgreSqlContainer _postgresContainer = new PostgreSqlBuilder()
-        .WithDatabase("test_db")
-        .WithUsername("postgres")
-        .WithPassword("postgres")
+        .WithDatabase(Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "test_db")
+        .WithUsername(Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres")
+        .WithPassword(Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres")
         .WithImage("postgres:17")
         .WithWaitStrategy(Wait.ForUnixContainer()
-            .UntilPortIsAvailable(5432)
             .UntilCommandIsCompleted("pg_isready -U postgres"))
+        .Build();
+
+    private readonly RabbitMqContainer _rabbitMqContainer = new RabbitMqBuilder()
+        .WithImage("rabbitmq:4.1.3-management-alpine")
+        .WithEnvironment("RABBITMQ_DEFAULT_USER", "guest")
+        .WithEnvironment("RABBITMQ_DEFAULT_PASS", "guest")
+        .WithPortBinding(5672)
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5672))
         .Build();
 
     public async Task InitializeAsync()
     {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "IntegrationTests");
+
         await _postgresContainer.StartAsync();
+        await _rabbitMqContainer.StartAsync();
 
         await WaitForPostgresReady(_postgresContainer.GetConnectionString());
-
-        ApplyMigrations();
-    }
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.ConfigureServices(services =>
-        {
-            var descriptors = services.Where(d => d.ServiceType == typeof(IDbConnection)).ToList();
-            foreach (var descriptor in descriptors)
-                services.Remove(descriptor);
-
-            services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(_postgresContainer.GetConnectionString()));
-
-            services.AddAuthentication("TestScheme")
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
-
-            services.AddAuthorization();
-        });
-    }
-
-    private void ApplyMigrations()
-    {
-        // Настройка FluentMigrator runner
-        var serviceProvider = new ServiceCollection()
-            .AddFluentMigratorCore()
-            .ConfigureRunner(rb => rb
-                .AddPostgres()
-                .WithGlobalConnectionString(_postgresContainer.GetConnectionString())
-                .ScanIn(typeof(Account).Assembly).For.Migrations()
-            )
-            .AddLogging(lb => lb.AddFluentMigratorConsole())
-            .BuildServiceProvider(false);
-
-        using var scope = serviceProvider.CreateScope();
-        var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
-
-        runner.MigrateUp();
     }
 
     public new async Task DisposeAsync()
     {
+        await _rabbitMqContainer.DisposeAsync();
         await _postgresContainer.DisposeAsync();
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        var testConnectionString = _postgresContainer.GetConnectionString();
+        var rabbitHostName = _rabbitMqContainer.Hostname;
+        var rabbitPort = _rabbitMqContainer.GetMappedPublicPort(5672);
+
+        builder.ConfigureServices(services =>
+        {
+            var newConfig = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:DefaultConnection"] = testConnectionString,
+                    ["RabbitMQ:Host"] = rabbitHostName,
+                    ["RabbitMQ:Port"] = rabbitPort.ToString(),
+                    ["RabbitMQ:Username"] = "guest",
+                    ["RabbitMQ:Password"] = "guest"
+                })
+                .Build();
+
+            services.AddDatabase(newConfig);
+            services.AddAuthentication("TestScheme")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
+            services.AddAuthorization();
+            services.AddRabbitMq(newConfig);
+            services.AddScoped<OutboxDispatcher>();
+        });
     }
 
     private static async Task WaitForPostgresReady(string connectionString)
@@ -95,6 +97,16 @@ public class IntegrationTestsWebFactory : WebApplicationFactory<Program>, IAsync
             }
         }
         throw new Exception("Postgres did not become ready in time.");
+    }
+
+    public async Task StopRabbitMqAsync()
+    {
+        await _rabbitMqContainer.StopAsync();
+    }
+
+    public async Task StartRabbitMqAsync()
+    {
+        await _rabbitMqContainer.StartAsync();
     }
 }
 

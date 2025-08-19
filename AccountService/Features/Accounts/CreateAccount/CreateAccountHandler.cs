@@ -1,12 +1,15 @@
-﻿using AccountService.Application.Models;
+﻿using AccountService.Application.Abstractions;
+using AccountService.Application.Contracts;
+using AccountService.Application.Models;
 using AccountService.Features.Accounts.Abstractions;
+using AccountService.Features.Accounts.Contracts;
 using AutoMapper;
 using MediatR;
 
 namespace AccountService.Features.Accounts.CreateAccount;
 
 public class CreateAccountHandler(
-    IMapper mapper, IAccountRepository repo,
+    IMapper mapper, IAccountRepository accRepo, IOutboxRepository outboxRepo,
     ICurrencyValidator currencyValidator,
     IOwnerVerificator ownerVerificator)
     : IRequestHandler<CreateAccountCommand, MbResult<AccountIdDto>>
@@ -20,8 +23,25 @@ public class CreateAccountHandler(
             throw new ArgumentException("Unsupported currency");
 
         var account = mapper.Map<Account>(request);
+        var accountOpenedEvent = mapper.Map<AccountOpened>(account);
+        accountOpenedEvent.Meta = new EventMeta(
+            "account-service",
+            Guid.NewGuid(), accountOpenedEvent.EventId
+        );
 
-        await repo.AddAsync(account);
+        await using var transaction = await accRepo.BeginTransactionAsync();
+        try
+        {
+            await accRepo.AddAsync(account, transaction);
+            await outboxRepo.AddAsync(accountOpenedEvent, "account.events", "account.opened", transaction);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch 
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
 
         var accountIdDto = mapper.Map<AccountIdDto>(account);
         return new MbResult<AccountIdDto>(accountIdDto);

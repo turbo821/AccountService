@@ -7,6 +7,7 @@ using Moq;
 
 namespace AccountService.Tests.UnitTests.Handlers;
 
+[Trait("Category", "Unit")]
 public class GetAccountListHandlerTests
 {
     private readonly IMapper _mapper;
@@ -55,7 +56,7 @@ public class GetAccountListHandlerTests
             }
         };
 
-        _repoMock.Setup(r => r.GetAllAsync(ownerId)).ReturnsAsync(accounts);
+        _repoMock.Setup(r => r.GetAllAsync(ownerId, null)).ReturnsAsync(accounts);
 
         var handler = CreateHandler();
 
@@ -83,6 +84,6 @@ public class GetAccountListHandlerTests
             Assert.Equal(account.OpenedAt, dto.OpenedAt);
         }
 
-        _repoMock.Verify(r => r.GetAllAsync(ownerId), Times.Once);
+        _repoMock.Verify(r => r.GetAllAsync(ownerId, null), Times.Once);
     }
 }

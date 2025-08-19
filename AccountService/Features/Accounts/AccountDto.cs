@@ -10,6 +10,7 @@
 /// <param name="Balance">Текущий баланс счёта.</param>
 /// <param name="InterestRate">Процентная ставка (если применимо).</param>
 /// <param name="OpenedAt">Дата и время открытия счёта.</param>
+/// <param name="IsFrozen">Статус заморозки счёта.</param>
 public record AccountDto(
     Guid Id,
     Guid OwnerId,
@@ -17,4 +18,5 @@ public record AccountDto(
     string Currency,
     decimal Balance,
     decimal? InterestRate,
-    DateTime OpenedAt);
+    DateTime OpenedAt,
+    bool IsFrozen);

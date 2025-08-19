@@ -1,4 +1,5 @@
-﻿using AccountService.Features.Accounts.CreateAccount;
+﻿using AccountService.Features.Accounts.Contracts;
+using AccountService.Features.Accounts.CreateAccount;
 using AccountService.Features.Accounts.GetAccountStatement;
 using AccountService.Features.Accounts.RegisterTransaction;
 using AccountService.Features.Accounts.UpdateAccount;
@@ -45,6 +46,33 @@ public class MappingProfile : Profile
         CreateMap<Transaction, TransactionIdDto>()
             .ForMember(dest => dest.TransactionId, 
                 opt => opt.MapFrom(src => src.Id));
+
+        CreateMap<Account, AccountOpened>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForCtorParam("AccountId", opt => opt.MapFrom(src => src.Id));
+
+        CreateMap<Transaction, MoneyCredited>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForCtorParam("OperationId", opt => opt.MapFrom(src => src.Id))
+            .ForCtorParam("Reason", opt => opt.MapFrom(src => src.Description));
+
+        CreateMap<Transaction, MoneyDebited>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForCtorParam("OperationId", opt => opt.MapFrom(src => src.Id))
+            .ForCtorParam("Reason", opt => opt.MapFrom(src => src.Description));
+
+        CreateMap<Account, AccountInterestUpdated>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForCtorParam("AccountId", opt => opt.MapFrom(src => src.Id))
+            .ForCtorParam("InterestRate", opt => opt.MapFrom(src => src.InterestRate!.Value));
+
+        CreateMap<UpdateAccountCommand, AccountUpdated>()
+            .ForCtorParam("EventId", opt => opt.MapFrom(_ => Guid.NewGuid()))
+            .ForCtorParam("OccurredAt", opt => opt.MapFrom(_ => DateTime.UtcNow));
     }
 }
 

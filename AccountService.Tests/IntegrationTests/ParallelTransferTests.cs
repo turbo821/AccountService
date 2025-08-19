@@ -1,5 +1,6 @@
 ﻿using AccountService.Application.Models;
 using AccountService.Features.Accounts;
+using AccountService.Tests.IntegrationTests.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -7,72 +8,21 @@ using Xunit.Abstractions;
 
 namespace AccountService.Tests.IntegrationTests;
 
-public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, IAsyncLifetime
+[Collection("IntegrationTests")]
+[Trait("Category", "Integration")]
+public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>
 {
     private readonly HttpClient _client;
     private readonly ITestOutputHelper _testOutputHelper;
 
-    public Guid Account1Id { get; private set; }
-    public Guid Account2Id { get; private set; }
+    private Guid Account1Id { get; set; }
+    private Guid Account2Id { get; set; }
 
     public ParallelTransferTests(IntegrationTestsWebFactory factory, ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
-    }
-
-    private async Task InitializeAccountsAsync()
-    {
-        var ownerId = Guid.NewGuid().ToString();
-        var createAccountCmd1 = new
-        {
-            OwnerId = ownerId,
-            Type = AccountType.Checking,
-            Currency = "USD",
-            InterestRate = (decimal?)null
-        };
-        var createAccountCmd2 = new
-        {
-            OwnerId = ownerId,
-            Type = "Checking",
-            Currency = "USD",
-            InterestRate = (decimal?)null
-        };
-
-        var resp1 = await _client.PostAsJsonAsync("/accounts", createAccountCmd1);
-        if (!resp1.IsSuccessStatusCode)
-        {
-            var errorBody = await resp1.Content.ReadAsStringAsync();
-            Console.WriteLine($"Response error: {errorBody}");
-        }
-        resp1.EnsureSuccessStatusCode();
-
-        var resp2 = await _client.PostAsJsonAsync("/accounts", createAccountCmd2);
-        resp2.EnsureSuccessStatusCode();
-
-        var account1 = (await resp1.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
-        var account2 = (await resp2.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
-
-        await AddTransaction(account1.AccountId, 1000m, "USD");
-        await AddTransaction(account2.AccountId, 1000m, "USD");
-
-        Account1Id = account1.AccountId;
-        Account2Id = account2.AccountId;
-    }
-
-    private async Task AddTransaction(Guid accountId, decimal amount, string currency)
-    {
-        var transactionCmd = new
-        {
-            Amount = amount,
-            Currency = currency,
-            Type = "Debit",
-            Description = "Initial deposit"
-        };
-
-        var resp = await _client.PostAsJsonAsync($"/accounts/{accountId}/transactions", transactionCmd);
-        resp.EnsureSuccessStatusCode();
     }
 
     [Fact]
@@ -127,20 +77,59 @@ public class ParallelTransferTests : IClassFixture<IntegrationTestsWebFactory>, 
         var account1 = (await account1Resp.Content.ReadFromJsonAsync<MbResult<AccountDto>>())!.Data!;
         var account2 = (await account2Resp.Content.ReadFromJsonAsync<MbResult<AccountDto>>())!.Data!;
 
-        _testOutputHelper.WriteLine($"Account 1 Balance: {(int)account1.Balance}");
+        _testOutputHelper.WriteLine($"\nAccount 1 Balance: {(int)account1.Balance}");
         _testOutputHelper.WriteLine($"Account 2 Balance: {(int)account2.Balance}");
 
         var totalBalance = account1.Balance + account2.Balance;
         Assert.Equal(2000m, totalBalance);
     }
 
-    public async Task InitializeAsync()
+    private async Task InitializeAccountsAsync()
     {
-        await InitializeAccountsAsync();
+        var ownerId = Guid.NewGuid().ToString();
+        var createAccountCmd1 = new
+        {
+            OwnerId = ownerId,
+            Type = AccountType.Checking,
+            Currency = "USD",
+            InterestRate = (decimal?)null
+        };
+        var createAccountCmd2 = new
+        {
+            OwnerId = ownerId,
+            Type = AccountType.Checking,
+            Currency = "USD",
+            InterestRate = (decimal?)null
+        };
+
+        var resp1 = await _client.PostAsJsonAsync("/accounts", createAccountCmd1);
+
+        resp1.EnsureSuccessStatusCode();
+
+        var resp2 = await _client.PostAsJsonAsync("/accounts", createAccountCmd2);
+        resp2.EnsureSuccessStatusCode();
+
+        var account1 = (await resp1.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
+        var account2 = (await resp2.Content.ReadFromJsonAsync<MbResult<AccountIdDto>>())!.Data!;
+
+        await AddTransaction(account1.AccountId, 1000m, "USD");
+        await AddTransaction(account2.AccountId, 1000m, "USD");
+
+        Account1Id = account1.AccountId;
+        Account2Id = account2.AccountId;
     }
 
-    public Task DisposeAsync()
+    private async Task AddTransaction(Guid accountId, decimal amount, string currency)
     {
-        return Task.CompletedTask;
+        var transactionCmd = new
+        {
+            Amount = amount,
+            Currency = currency,
+            Type = TransactionType.Credit,
+            Description = "Initial credit"
+        };
+
+        var resp = await _client.PostAsJsonAsync($"/accounts/{accountId}/transactions", transactionCmd);
+        resp.EnsureSuccessStatusCode();
     }
 }

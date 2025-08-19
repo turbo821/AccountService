@@ -14,6 +14,7 @@ public class Account
     public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ClosedAt { get; set; }
     public long Version { get; set; }
+    public bool IsFrozen { get; set; }
 
     public List<Transaction> Transactions { get; set; } = [];
 
@@ -24,12 +25,12 @@ public class Account
 
         switch (transaction.Type)
         {
-            case TransactionType.Credit when Balance < transaction.Amount:
+            case TransactionType.Debit when Balance < transaction.Amount:
                 throw new InvalidOperationException("Insufficient funds for this transaction");
-            case TransactionType.Credit:
+            case TransactionType.Debit:
                 Balance -= transaction.Amount;
                 break;
-            case TransactionType.Debit:
+            case TransactionType.Credit:
                 Balance += transaction.Amount;
                 break;
             default:
