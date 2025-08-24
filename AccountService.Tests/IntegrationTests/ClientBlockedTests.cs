@@ -41,7 +41,7 @@ public class ClientBlockedTests(IntegrationTestsWebFactory factory, ITestOutputH
         await repo.AddAsync(clientBlocked, "account.events", "client.blocked");
         await outboxDispatcher.ProcessOutboxMessages();
 
-        await Task.Delay(2); // Wait for the consumer to process in the background the event for sure
+        await Task.Delay(2000); // Wait for the consumer to process in the background the event for sure
         output.WriteLine("Client blocked");
 
         var debitAfterBlocked = new
@@ -68,7 +68,7 @@ public class ClientBlockedTests(IntegrationTestsWebFactory factory, ITestOutputH
         await repo.AddAsync(clientUnblocked, "account.events", "client.unblocked");
         await outboxDispatcher.ProcessOutboxMessages();
 
-        await Task.Delay(2); // Wait for the consumer to process in the background the event for sure
+        await Task.Delay(2000); // Wait for the consumer to process in the background the event for sure
         output.WriteLine("\nClient unblocked");
 
         var debitAfterUnblocked = new
