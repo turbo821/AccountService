@@ -34,6 +34,7 @@ public class OutboxTests(IntegrationTestsWebFactory factory, ITestOutputHelper o
         Assert.NotEmpty(messagesBeforeStart);
 
         await factory.StartRabbitMqAsync();
+        await Task.Delay(2000);
 
         await outboxDispatcher.ProcessOutboxMessages(); // This should now publish the messages that were in the outbox
 
